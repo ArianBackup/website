@@ -1,6 +1,16 @@
-# henryheffernan.com
+# Arian Farhadi — Portfolio
 
-This is one of two repositories created for my portfolio website <a href="https://henryheffernan.com/"><samp>henryheffernan.com</samp></a>. If you are looking for the 2D OS repository you can find it <a href="https://github.com/henryjeff/portfolio-inner-site"><samp>here</samp></a>! Thanks for taking the time to check this out. If you have any questions of comments, feel free to shoot me an email at <samp><a href="mailto:henryheffernan@gmail.com">henryheffernan@gmail.com</a></samp> or you can DM me on twitter <a href="https://twitter.com/henryheffernan"><samp>@henryheffernan</samp></a>.
+My personal portfolio website: an interactive 3D room you can explore, with a
+working retro computer at its centre.
+
+This is a fork of [Henry Heffernan's portfolio](https://github.com/henryjeff/portfolio)
+(<a href="https://henryheffernan.com/"><samp>henryheffernan.com</samp></a>), adapted
+for my own use. The original 3D scene, models and baked textures are his work —
+all credit for the design goes to him. See `LICENSE.md`.
+
+The computer screen renders a second, separate "2D OS" project inside an iframe.
+Upstream that is [portfolio-inner-site](https://github.com/henryjeff/portfolio-inner-site);
+until I fork and deploy my own, the screen still loads Henry's.
 
 <br>
 
@@ -9,7 +19,7 @@ To setup a dev environment:
 ```bash
 # Clone the repository
 
-# Install dependencies 
+# Install dependencies
 npm i
 
 # Run the local dev server
@@ -19,7 +29,7 @@ npm run dev
 To serve a production build:
 
 ```bash
-# Install dependencies if not already done - 'npi i'
+# Install dependencies if not already done - 'npm i'
 
 # Build for production
 npm run build
@@ -27,3 +37,6 @@ npm run build
 # Serve the build using express
 npm start
 ```
+
+The production build is fully static (it lands in `public/`), so it can be hosted
+on any static host. `vercel.json` configures the build for Vercel.
