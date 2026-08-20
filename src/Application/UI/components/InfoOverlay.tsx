@@ -7,16 +7,60 @@ interface InfoOverlayProps {
 }
 
 const NAME_TEXT = 'Arian Farhadi';
-const TITLE_TEXT = 'Software Engineer';
+const TITLE_TEXT = 'London, UK';
+const HOME_TIME_ZONE = 'Europe/London';
+const HOME_LABEL = 'LONDON';
 const MULTIPLIER = 1;
+
+// 12-hour clock for a given IANA zone; falls back to the viewer's own zone if
+// the browser cannot resolve the requested one.
+const formatTime = (timeZone?: string) => {
+    const options: Intl.DateTimeFormatOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+    };
+    try {
+        return new Date().toLocaleTimeString('en-US', { ...options, timeZone });
+    } catch {
+        return new Date().toLocaleTimeString('en-US', options);
+    }
+};
+
+const resolveViewerTimeZone = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    } catch {
+        return '';
+    }
+};
+
+// 'America/New_York' -> 'NEW YORK'
+const labelForTimeZone = (timeZone: string) => {
+    const city = timeZone.split('/').pop();
+    return city ? city.replace(/_/g, ' ').toUpperCase() : 'LOCAL';
+};
+
+const VIEWER_TIME_ZONE = resolveViewerTimeZone();
+// Only worth a second clock when the viewer is somewhere else.
+const SHOW_VIEWER_CLOCK =
+    VIEWER_TIME_ZONE !== '' && VIEWER_TIME_ZONE !== HOME_TIME_ZONE;
+const VIEWER_LABEL = labelForTimeZone(VIEWER_TIME_ZONE);
+
+const homeLine = () => `${HOME_LABEL} ${formatTime(HOME_TIME_ZONE)}`;
+const viewerLine = () => `${VIEWER_LABEL} ${formatTime()}`;
 
 const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
     const visRef = useRef(visible);
     const [nameText, setNameText] = useState('');
     const [titleText, setTitleText] = useState('');
-    const [time, setTime] = useState(new Date().toLocaleTimeString());
-    const timeRef = useRef(time);
-    const [timeText, setTimeText] = useState('');
+    const [homeClock, setHomeClock] = useState(homeLine);
+    const [viewerClock, setViewerClock] = useState(viewerLine);
+    const homeClockRef = useRef(homeClock);
+    const viewerClockRef = useRef(viewerClock);
+    const [homeText, setHomeText] = useState('');
+    const [viewerText, setViewerText] = useState('');
     const [textDone, setTextDone] = useState(false);
     const [volumeVisible, setVolumeVisible] = useState(false);
     const [freeCamVisible, setFreeCamVisible] = useState(false);
@@ -63,12 +107,25 @@ const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
                         typeText(
                             0,
                             '',
-                            time,
-                            setTimeText,
+                            homeClock,
+                            setHomeText,
                             () => {
-                                setTextDone(true);
+                                if (!SHOW_VIEWER_CLOCK) {
+                                    setTextDone(true);
+                                    return;
+                                }
+                                typeText(
+                                    0,
+                                    '',
+                                    viewerClock,
+                                    setViewerText,
+                                    () => {
+                                        setTextDone(true);
+                                    },
+                                    viewerClockRef
+                                );
                             },
-                            timeRef
+                            homeClockRef
                         );
                     });
                 });
@@ -94,15 +151,25 @@ const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setTime(new Date().toLocaleTimeString());
+            setHomeClock(homeLine());
+            setViewerClock(viewerLine());
         }, 1000);
         return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
-        timeRef.current = time;
-        textDone && setTimeText(time);
-    }, [time]);
+        homeClockRef.current = homeClock;
+        textDone && setHomeText(homeClock);
+    }, [homeClock]);
+
+    useEffect(() => {
+        viewerClockRef.current = viewerClock;
+        textDone && SHOW_VIEWER_CLOCK && setViewerText(viewerClock);
+    }, [viewerClock]);
+
+    // The bottom clock shares its row with the toggles; when the viewer is in
+    // London there is only one clock, so it takes that row itself.
+    const lastClockText = SHOW_VIEWER_CLOCK ? viewerText : homeText;
 
     return (
         <div style={styles.wrapper}>
@@ -116,7 +183,12 @@ const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
                     <p>{titleText}</p>
                 </div>
             )}
-            {timeText !== '' && (
+            {SHOW_VIEWER_CLOCK && homeText !== '' && (
+                <div style={styles.container}>
+                    <p>{homeText}</p>
+                </div>
+            )}
+            {lastClockText !== '' && (
                 <div style={styles.lastRow}>
                     <div
                         style={Object.assign(
@@ -125,7 +197,7 @@ const InfoOverlay: React.FC<InfoOverlayProps> = ({ visible }) => {
                             styles.lastRowChild
                         )}
                     >
-                        <p>{timeText}</p>
+                        <p>{lastClockText}</p>
                     </div>
                     {volumeVisible && (
                         <div style={styles.lastRowChild}>
@@ -153,6 +225,8 @@ const styles: StyleSheetCSS = {
         display: 'flex',
         marginBottom: 4,
         boxSizing: 'border-box',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
     },
     wrapper: {
         position: 'absolute',
