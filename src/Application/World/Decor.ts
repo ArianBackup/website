@@ -27,6 +27,14 @@ export default class Decor {
     }
 
     setModel() {
-        this.scene.add(this.bakedModel.getModel());
+        const model = this.bakedModel.getModel();
+
+        // The loose sheet on the desk is the upstream credits page, baked into
+        // the decor texture. Drop the mesh rather than reprint someone else's
+        // credits under a different name.
+        const paper = model.getObjectByName('paper');
+        if (paper) paper.parent?.remove(paper);
+
+        this.scene.add(model);
     }
 }
