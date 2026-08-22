@@ -144,58 +144,78 @@ export default class MonitorScreen extends EventEmitter {
         // Create iframe
         const iframe = document.createElement('iframe');
 
-        // Bubble mouse move events to the main application, so we can affect the camera
-        iframe.onload = () => {
-            if (iframe.contentWindow) {
-                window.addEventListener('message', (event) => {
-                    var evt = new CustomEvent(event.data.type, {
-                        bubbles: true,
-                        cancelable: false,
-                    });
+        /**
+         * Replays an interaction that happened inside the screen as an event on
+         * the iframe element, so the camera and audio (which listen on document
+         * and check `inComputer`) can react to it.
+         */
+        const dispatchFromScreen = (data: {
+            type: string;
+            clientX?: number;
+            clientY?: number;
+            key?: string;
+        }) => {
+            const evt = new CustomEvent(data.type, {
+                bubbles: true,
+                cancelable: false,
+            });
 
-                    // @ts-ignore
-                    evt.inComputer = true;
-                    if (event.data.type === 'mousemove') {
-                        var clRect = iframe.getBoundingClientRect();
-                        const { top, left, width, height } = clRect;
-                        const widthRatio = width / IFRAME_SIZE.w;
-                        const heightRatio = height / IFRAME_SIZE.h;
+            // @ts-ignore
+            evt.inComputer = true;
+            if (data.type === 'mousemove') {
+                const clRect = iframe.getBoundingClientRect();
+                const { top, left, width, height } = clRect;
+                const widthRatio = width / IFRAME_SIZE.w;
+                const heightRatio = height / IFRAME_SIZE.h;
 
-                        // @ts-ignore
-                        evt.clientX = Math.round(
-                            event.data.clientX * widthRatio + left
-                        );
-                        //@ts-ignore
-                        evt.clientY = Math.round(
-                            event.data.clientY * heightRatio + top
-                        );
-                    } else if (event.data.type === 'keydown') {
-                        // @ts-ignore
-                        evt.key = event.data.key;
-                    } else if (event.data.type === 'keyup') {
-                        // @ts-ignore
-                        evt.key = event.data.key;
-                    }
-
-                    iframe.dispatchEvent(evt);
-                });
+                // @ts-ignore
+                evt.clientX = Math.round((data.clientX ?? 0) * widthRatio + left);
+                //@ts-ignore
+                evt.clientY = Math.round((data.clientY ?? 0) * heightRatio + top);
+            } else if (data.type === 'keydown' || data.type === 'keyup') {
+                // @ts-ignore
+                evt.key = data.key;
             }
+
+            iframe.dispatchEvent(evt);
+        };
+
+        // The app posts synthetic keystrokes to itself (the typing sounds on the
+        // info overlay), so this listener stays regardless of what the screen is.
+        window.addEventListener('message', (event) => {
+            if (!event.data || typeof event.data.type !== 'string') return;
+            dispatchFromScreen(event.data);
+        });
+
+        // The screen is served from this same origin, so its events can be read
+        // directly rather than relying on the page inside to post them out.
+        iframe.onload = () => {
+            const screenDocument = iframe.contentDocument;
+            if (!screenDocument) return;
+
+            screenDocument.addEventListener('mousemove', (event) => {
+                dispatchFromScreen({
+                    type: 'mousemove',
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                });
+            });
+            (['mousedown', 'mouseup'] as const).forEach((type) => {
+                screenDocument.addEventListener(type, () => {
+                    dispatchFromScreen({ type });
+                });
+            });
+            (['keydown', 'keyup'] as const).forEach((type) => {
+                screenDocument.addEventListener(type, (event) => {
+                    dispatchFromScreen({ type, key: event.key });
+                });
+            });
         };
 
         // Set iframe attributes
-        // PROD
-        iframe.src = 'https://os.henryheffernan.com/';
-        /**
-         * Use dev server is query params are present
-         *
-         * Warning: This will not work unless the dev server is running on localhost:3000
-         * Also running the dev server causes browsers to freak out over unsecure connections
-         * in the iframe, so it will flag a ton of issues.
-         */
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('dev')) {
-            iframe.src = 'http://localhost:3000/';
-        }
+        // The desktop ships with this site (static/os -> public/os), so it is
+        // same-origin and needs no separate deployment.
+        iframe.src = '/os/index.html';
         iframe.style.width = this.screenSize.width + 'px';
         iframe.style.height = this.screenSize.height + 'px';
         iframe.style.padding = IFRAME_PADDING + 'px';
