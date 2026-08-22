@@ -533,6 +533,40 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * The Download CV button is easy to miss in a toolbar of XP chrome, so it
+     * gets a slow breathing halo. Deliberately gentle: it fades fully out at
+     * each end rather than sitting lit, holds the button's own blue instead of
+     * introducing a colour, and stops while hovered so it never fights the
+     * hover state. Honoured only when the viewer allows motion.
+     */
+    var GLOW_CSS =
+        '@keyframes af-cv-glow{' +
+        '0%,100%{box-shadow:0 0 0 0 rgba(49,106,197,0),0 0 0 0 rgba(49,106,197,0)}' +
+        '50%{box-shadow:0 0 0 2px rgba(49,106,197,0.22),0 0 9px 2px rgba(49,106,197,0.40)}}' +
+        '.af-cv-glow{animation:af-cv-glow 2.6s ease-in-out infinite;border-radius:4px}' +
+        '.af-cv-glow:hover{animation:none}' +
+        '@media (prefers-reduced-motion:reduce){.af-cv-glow{animation:none}}';
+
+    function ensureGlowStyle() {
+        if (document.getElementById('af-cv-glow-style')) return;
+        var style = document.createElement('style');
+        style.id = 'af-cv-glow-style';
+        style.textContent = GLOW_CSS;
+        (document.head || document.documentElement).appendChild(style);
+    }
+
+    function glowDownloadButton() {
+        ensureGlowStyle();
+        var nodes = document.querySelectorAll('a,button,div');
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if ((el.textContent || '').trim() !== 'Download CV') continue;
+            if (el.classList.contains('af-cv-glow')) continue;
+            el.classList.add('af-cv-glow');
+        }
+    }
+
+    /**
      * The AriTube window's player is an empty box in the design. Rather than a
      * video it gets the Sculptr demo — the app's model-generation loader, which
      * hands off to the studio — mounted the moment the window opens, and
@@ -591,6 +625,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     setInterval(function () {
         inject();
         wireCvRows();
+        glowDownloadButton();
         positionWallpaper();
         mountStudio();
     }, 400);
