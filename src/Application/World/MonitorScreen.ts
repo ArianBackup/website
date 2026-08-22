@@ -9,6 +9,9 @@ import Camera from '../Camera/Camera';
 import EventEmitter from '../Utils/EventEmitter';
 
 const SCREEN_SIZE = { w: 1280, h: 1024 };
+// The desktop on the screen has a CRT treatment of its own, so this one is off
+// unless the viewer asks for it from the start menu.
+const CRT_EFFECT_KEY = 'arian-portfolio:crt-effect';
 const IFRAME_PADDING = 32;
 const IFRAME_SIZE = {
     w: SCREEN_SIZE.w - IFRAME_PADDING,
@@ -33,6 +36,8 @@ export default class MonitorScreen extends EventEmitter {
     mouseClickInProgress: boolean;
     dimmingPlane: THREE.Mesh;
     videoTextures: { [key in string]: THREE.VideoTexture };
+    iframe: HTMLIFrameElement;
+    crtEffectMeshes: THREE.Mesh[];
 
     constructor() {
         super();
@@ -46,6 +51,7 @@ export default class MonitorScreen extends EventEmitter {
         this.position = new THREE.Vector3(0, 950, 255);
         this.rotation = new THREE.Euler(-3 * THREE.MathUtils.DEG2RAD, 0, 0);
         this.videoTextures = {};
+        this.crtEffectMeshes = [];
         this.mouseClickInProgress = false;
         this.shouldLeaveMonitor = false;
 
@@ -55,6 +61,50 @@ export default class MonitorScreen extends EventEmitter {
         const maxOffset = this.createTextureLayers();
         this.createEnclosingPlanes(maxOffset);
         this.createPerspectiveDimmer(maxOffset);
+        this.setCrtEffect(MonitorScreen.crtEffectPreference());
+    }
+
+    /**
+     * Reads the viewer's saved choice. Defaults to off.
+     */
+    static crtEffectPreference(): boolean {
+        try {
+            return window.localStorage.getItem(CRT_EFFECT_KEY) === '1';
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * Shows or hides the grime, static and jitter that sit over the screen.
+     * The static videos are paused while hidden so they are not decoded for
+     * nothing.
+     */
+    setCrtEffect(enabled: boolean) {
+        this.crtEffectMeshes.forEach((mesh) => {
+            mesh.visible = enabled;
+        });
+
+        if (this.iframe) {
+            this.iframe.classList.toggle('jitter', enabled);
+        }
+
+        Object.values(this.videoTextures).forEach((texture) => {
+            const video = texture.image as HTMLVideoElement;
+            if (!video) return;
+            if (enabled) {
+                const played = video.play();
+                if (played) played.catch(() => {});
+            } else {
+                video.pause();
+            }
+        });
+
+        try {
+            window.localStorage.setItem(CRT_EFFECT_KEY, enabled ? '1' : '0');
+        } catch (error) {
+            // storage unavailable (private mode); the setting just won't persist
+        }
     }
 
     initializeScreenEvents() {
@@ -184,6 +234,11 @@ export default class MonitorScreen extends EventEmitter {
         // info overlay), so this listener stays regardless of what the screen is.
         window.addEventListener('message', (event) => {
             if (!event.data || typeof event.data.type !== 'string') return;
+            // The start menu on the screen toggles the CRT overlay.
+            if (event.data.type === 'crt-effect') {
+                this.setCrtEffect(!!event.data.enabled);
+                return;
+            }
             dispatchFromScreen(event.data);
         });
 
@@ -221,10 +276,12 @@ export default class MonitorScreen extends EventEmitter {
         iframe.style.padding = IFRAME_PADDING + 'px';
         iframe.style.boxSizing = 'border-box';
         iframe.style.opacity = '1';
-        iframe.className = 'jitter';
+        iframe.className = 'screen';
         iframe.id = 'computer-screen';
         iframe.frameBorder = '0';
         iframe.title = 'FarhadiOS';
+
+        this.iframe = iframe;
 
         // Add iframe to container
         container.appendChild(iframe);
@@ -287,31 +344,37 @@ export default class MonitorScreen extends EventEmitter {
         // Scale factor to multiply depth offset by
         const scaleFactor = 4;
 
-        // Construct the texture layers
+        // Construct the texture layers. `effect` marks the ones that make up the
+        // CRT treatment; the inner shadow is left on always, since it is what
+        // seats the screen into the bezel rather than a stylistic overlay.
         const layers = {
             smudge: {
                 texture: textures.monitorSmudgeTexture,
                 blending: THREE.AdditiveBlending,
                 opacity: 0.12,
                 offset: 24,
+                effect: true,
             },
             innerShadow: {
                 texture: textures.monitorShadowTexture,
                 blending: THREE.NormalBlending,
                 opacity: 1,
                 offset: 5,
+                effect: false,
             },
             video: {
                 texture: this.videoTextures['video-1'],
                 blending: THREE.AdditiveBlending,
                 opacity: 0.5,
                 offset: 10,
+                effect: true,
             },
             video2: {
                 texture: this.videoTextures['video-2'],
                 blending: THREE.AdditiveBlending,
                 opacity: 0.1,
                 offset: 15,
+                effect: true,
             },
         };
 
@@ -321,12 +384,13 @@ export default class MonitorScreen extends EventEmitter {
         // Add the texture layers to the screen
         for (const [_, layer] of Object.entries(layers)) {
             const offset = layer.offset * scaleFactor;
-            this.addTextureLayer(
+            const mesh = this.addTextureLayer(
                 layer.texture,
                 layer.blending,
                 layer.opacity,
                 offset
             );
+            if (layer.effect) this.crtEffectMeshes.push(mesh);
             // Calculate the max offset
             if (offset > maxOffset) maxOffset = offset;
         }
@@ -360,7 +424,7 @@ export default class MonitorScreen extends EventEmitter {
         blendingMode: THREE.Blending,
         opacity: number,
         offset: number
-    ) {
+    ): THREE.Mesh {
         // Create material
         const material = new THREE.MeshBasicMaterial({
             map: texture,
@@ -388,6 +452,8 @@ export default class MonitorScreen extends EventEmitter {
         mesh.rotation.copy(this.rotation);
 
         this.scene.add(mesh);
+
+        return mesh;
     }
 
     /**
