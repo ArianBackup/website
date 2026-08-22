@@ -500,9 +500,69 @@ document.addEventListener('DOMContentLoaded', async function() {
         row.parentElement.insertBefore(item, row.nextSibling);
     }
 
-    // Tell the host what was chosen last time, then keep the item present.
+    /**
+     * The four "Download CV" / "Save this CV" controls are real anchors, but the
+     * start menu's "Print-ready CV" is a plain row with no link behind it.
+     */
+    var CV_HREF = 'uploads/Arian_Farhadi_CV.pdf';
+    var CV_NAME = 'Arian_Farhadi_CV.pdf';
+
+    function downloadCv() {
+        var link = document.createElement('a');
+        link.href = CV_HREF;
+        link.download = CV_NAME;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
+    function wireCvRows() {
+        var nodes = document.querySelectorAll('div,span,li');
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if ((el.textContent || '').trim() !== ANCHOR_TEXT) continue;
+            if (el.closest('a') || el.getAttribute('data-af-cv')) continue;
+            el.setAttribute('data-af-cv', '1');
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                downloadCv();
+            });
+        }
+    }
+
+    /**
+     * The wallpaper is `cover`ed into a 5:4 screen from a 16:9 source, which
+     * crops ~540px horizontally. Centred, that cuts the "ARIAN" lettering off;
+     * the type ends 73px from the source's right edge, so right-aligning shows
+     * all of it at any viewport size.
+     */
+    function positionWallpaper() {
+        var widest = null;
+        var nodes = document.querySelectorAll('div');
+        for (var i = 0; i < nodes.length; i++) {
+            var style = window.getComputedStyle(nodes[i]);
+            if (style.backgroundImage.indexOf('url(') === -1) continue;
+            var rect = nodes[i].getBoundingClientRect();
+            if (rect.width < 400) continue;
+            if (!widest || rect.width > widest.getBoundingClientRect().width) {
+                widest = nodes[i];
+            }
+        }
+        if (widest && widest.style.backgroundPosition !== '100% center') {
+            widest.style.backgroundPosition = '100% center';
+        }
+    }
+
+    // Tell the host what was chosen last time, then keep both tweaks applied
+    // as the app re-renders.
     publish(isOn());
-    setInterval(inject, 400);
+    setInterval(function () {
+        inject();
+        wireCvRows();
+        positionWallpaper();
+    }, 400);
 })();
 </script>
 </body>
