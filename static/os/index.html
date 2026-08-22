@@ -533,6 +533,36 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * The AriTube window's player is an empty box in the design. Rather than a
+     * video it gets the Sculptr demo — the app's model-generation loader, which
+     * hands off to the studio — mounted the moment the window opens, and
+     * remounted (so the loader replays) if the window is closed and reopened.
+     */
+    function mountStudio() {
+        var best = null;
+        var nodes = document.querySelectorAll('div');
+        for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if (el.children.length || (el.textContent || '').trim()) continue;
+            var rect = el.getBoundingClientRect();
+            if (rect.width < 400 || rect.height < 200) continue;
+            if (window.getComputedStyle(el).backgroundColor !== 'rgb(255, 255, 255)') continue;
+            if (!best || rect.width * rect.height > best.area) {
+                best = { el: el, area: rect.width * rect.height };
+            }
+        }
+        if (!best) return;
+        if (best.el.querySelector('iframe[data-af-studio]')) return;
+
+        var frame = document.createElement('iframe');
+        frame.setAttribute('data-af-studio', '1');
+        frame.title = 'Sculptr Studio';
+        frame.src = 'studio/index.html';
+        frame.style.cssText = 'display:block;width:100%;height:100%;border:0;';
+        best.el.appendChild(frame);
+    }
+
+    /**
      * The wallpaper is `cover`ed into a 5:4 screen from a 16:9 source, which
      * crops ~540px horizontally. Centred, that cuts the "ARIAN" lettering off;
      * the type ends 73px from the source's right edge, so right-aligning shows
@@ -562,6 +592,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         inject();
         wireCvRows();
         positionWallpaper();
+        mountStudio();
     }, 400);
 })();
 </script>

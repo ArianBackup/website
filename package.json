@@ -3,8 +3,9 @@
     "license": "UNLICENSED",
     "scripts": {
         "start": "node server/index.ts",
-        "build": "webpack --config ./bundler/webpack.prod.js",
-        "dev": "webpack serve --config ./bundler/webpack.dev.js"
+        "build": "webpack --config ./bundler/webpack.prod.js && webpack --config ./bundler/webpack.studio.js",
+        "dev": "webpack serve --config ./bundler/webpack.dev.js",
+        "build:studio": "webpack --config ./bundler/webpack.studio.js"
     },
     "dependencies": {
         "@babel/core": "^7.16.12",
