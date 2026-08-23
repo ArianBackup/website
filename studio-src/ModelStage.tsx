@@ -27,6 +27,8 @@ const MODEL_URL = 'guide-model.glb';
 const CAMERA_Z = 3.5;
 /** World height the head+shoulders are normalised to (visible height at z 3.5 / fov 22 is ~1.36). */
 const BUST_HEIGHT = 1.35;
+/** Drop the subject a fifth of its height, so the frame carries headroom above. */
+const SUBJECT_DROP = BUST_HEIGHT * 0.2;
 
 /** Camera pose shared by every stage on screen, so compare views orbit as one. */
 export interface SharedCamera {
@@ -136,15 +138,20 @@ export default function ModelStage({
                     }
                 });
                 // Frame to match the app's composition: the bust fills the
-                // height, shoulders running off the bottom edge. Clearing the
-                // tool panel is the stage's job — it slides left when the panel
-                // opens, as in the app — so the subject itself stays centred.
+                // height, shoulders running off the bottom edge, sitting low
+                // enough to leave headroom. Clearing the tool panel is the
+                // stage's job — it slides left when the panel opens, as in the
+                // app — so the subject itself stays horizontally centred.
                 const box = new THREE.Box3().setFromObject(root);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
                 const scale = BUST_HEIGHT / Math.max(size.y, 1e-4);
                 root.scale.setScalar(scale);
-                root.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+                root.position.set(
+                    -center.x * scale,
+                    -center.y * scale - SUBJECT_DROP,
+                    -center.z * scale,
+                );
 
                 scene.add(root);
                 meshesRef.current = meshes;
