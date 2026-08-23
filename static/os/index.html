@@ -645,8 +645,17 @@ document.addEventListener('DOMContentLoaded', async function() {
      * default window leaves it a 747x360 slot. Only the first appearance is
      * forced — if the viewer restores the window down, it stays restored, and
      * the flag resets when the window closes so the next open maximises again.
+     *
+     * Opening it is watched for rather than waited on: a press on anything
+     * labelled Sculptr arms a per-frame check, so the window is maximised on
+     * the frame its title bar lands instead of up to a tick later, which read
+     * as the window opening small and then growing.
      */
+    var SCULPTR_TITLE = 'Sculptr — AriTube';
+    /** How long after a press to keep looking for the window to appear. */
+    var SCULPTR_WATCH_MS = 2000;
     var sculptrMaximised = false;
+    var sculptrWatchUntil = 0;
 
     function windowTitleEl(text) {
         var nodes = document.querySelectorAll('div,span');
@@ -660,7 +669,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function maximizeSculptr() {
-        var title = windowTitleEl('Sculptr — AriTube');
+        var title = windowTitleEl(SCULPTR_TITLE);
         if (!title) {
             sculptrMaximised = false; // window closed; maximise again next time
             return;
@@ -686,6 +695,28 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         sculptrMaximised = true;
         controls[controls.length - 2].el.click();
+    }
+
+    function pollSculptr() {
+        if (sculptrMaximised) return;
+        maximizeSculptr();
+        if (!sculptrMaximised && window.performance.now() < sculptrWatchUntil) {
+            window.requestAnimationFrame(pollSculptr);
+        }
+    }
+
+    function watchForSculptr() {
+        document.addEventListener('pointerdown', function (event) {
+            var el = event.target;
+            if (!el || el.nodeType !== 1 || sculptrMaximised) return;
+            // The desktop icon, its label, and the start-menu entry all read
+            // "Sculptr"; the window's own title bar reads "Sculptr — AriTube",
+            // by which point the flag above has already stopped this.
+            if ((el.textContent || '').trim().indexOf('Sculptr') !== 0) return;
+            var running = sculptrWatchUntil > window.performance.now();
+            sculptrWatchUntil = window.performance.now() + SCULPTR_WATCH_MS;
+            if (!running) window.requestAnimationFrame(pollSculptr);
+        }, true);
     }
 
     /**
@@ -745,6 +776,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // as the app re-renders.
     publish(isOn());
     wireWheel();
+    watchForSculptr();
     setInterval(function () {
         inject();
         wireWheel();
