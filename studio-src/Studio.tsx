@@ -1,14 +1,29 @@
 /**
- * Studio — Stage · Rail · Dock, trimmed to the main editing tab.
+ * Studio — Stage · Rail · Dock, trimmed to the tools this demo carries.
  *
  * Ported from app/studio (page.tsx + components/*). Structure, copy, spacing
  * and behaviour follow the app; what is deliberately absent is everything the
- * brief excluded — compare views, markup, injection mapping, patient record,
- * analysis overlays and the variation dock — so the rail carries Sculpt alone.
+ * brief excluded — drawing and measurement, injection mapping, patient record,
+ * analysis overlays and the variation dock — so the rail carries Sculpt and
+ * Lighting, and the view switcher carries the three compare modes.
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import ModelStage from './ModelStage';
-import { ChevronDown, RotateCcw, Redo2, Search, SlidersHorizontal, Undo2 } from './icons';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import ModelStage, { createSharedCamera } from './ModelStage';
+import LightingPanel from './LightingPanel';
+import { FlowSlider } from './bits';
+import {
+    ChevronDown,
+    Columns2,
+    Maximize2,
+    RotateCcw,
+    Redo2,
+    Search,
+    SlidersHorizontal,
+    SquareSplitHorizontal,
+    Sun,
+    Undo2,
+} from './icons';
+import { DEFAULT_LIGHT, type LightSettings } from './lighting';
 import {
     activeCount,
     applySlider,
@@ -18,7 +33,22 @@ import {
     type SliderDef,
 } from './sliders';
 
-const PATIENT_NAME = 'Anabella';
+/** Panel width plus its right offset — what it takes out of the stage. */
+const PANEL_SPAN = 352 + 76;
+
+type StudioView = 'single' | 'split' | 'reveal';
+type StudioTool = 'sculpt' | 'lighting';
+
+const VIEWS: { id: StudioView; label: string; Icon: React.FC<{ size?: number }> }[] = [
+    { id: 'single', label: 'Single', Icon: Maximize2 },
+    { id: 'split', label: 'Split', Icon: Columns2 },
+    { id: 'reveal', label: 'Reveal', Icon: SquareSplitHorizontal },
+];
+
+const TOOLS: { id: StudioTool; label: string; title: string; subtitle: string; Icon: React.FC<{ size?: number; strokeWidth?: number }> }[] = [
+    { id: 'sculpt', label: 'Sculpt', title: 'Sculpt', subtitle: 'Morph the anatomy in real time', Icon: SlidersHorizontal },
+    { id: 'lighting', label: 'Lighting', title: 'Lighting', subtitle: 'Light, lens & render mode', Icon: Sun },
+];
 
 /* ── Collapsible ─────────────────────────────────────────────────────────── */
 
@@ -53,83 +83,6 @@ function Collapsible({
 function CountBadge({ count }: { count: number }) {
     if (count <= 0) return null;
     return <span className="st-count">{count}</span>;
-}
-
-/* ── FlowSlider ──────────────────────────────────────────────────────────── */
-
-function FlowSlider({
-    label,
-    value,
-    min,
-    max,
-    step = 1,
-    centerOrigin = false,
-    modified,
-    onChange,
-    onReset,
-}: {
-    label: string;
-    value: number;
-    min: number;
-    max: number;
-    step?: number;
-    centerOrigin?: boolean;
-    modified?: boolean;
-    onChange: (v: number) => void;
-    onReset?: () => void;
-}) {
-    const span = max - min;
-    const pct = ((value - min) / span) * 100;
-    const zeroPct = ((0 - min) / span) * 100;
-    const fillLeft = centerOrigin ? Math.min(pct, zeroPct) : 0;
-    const fillWidth = centerOrigin ? Math.abs(pct - zeroPct) : pct;
-
-    return (
-        <div className="st-slider-row">
-            <div className="st-slider-head">
-                <span className="st-slider-name">
-                    {modified && <span className="st-slider-dot" aria-hidden />}
-                    <span>{label}</span>
-                </span>
-                <span className="st-slider-right">
-                    {modified && onReset && (
-                        <button
-                            type="button"
-                            className="st-reset"
-                            onClick={onReset}
-                            aria-label={`Reset ${label}`}
-                        >
-                            reset
-                        </button>
-                    )}
-                    <span className="st-slider-value">{Math.round(value)}</span>
-                </span>
-            </div>
-            <div className="st-track-wrap">
-                <div className="st-track">
-                    {centerOrigin && <span className="st-track-zero" style={{ left: `${zeroPct}%` }} aria-hidden />}
-                    <span
-                        className="st-track-fill"
-                        style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
-                        aria-hidden
-                    />
-                </div>
-                <span className="st-thumb-wrap" style={{ left: `${pct}%` }} aria-hidden>
-                    <span className="st-slider-thumb" />
-                </span>
-                <input
-                    className="st-range"
-                    type="range"
-                    min={min}
-                    max={max}
-                    step={step}
-                    value={value}
-                    aria-label={label}
-                    onChange={(e) => onChange(Number(e.target.value))}
-                />
-            </div>
-        </div>
-    );
 }
 
 /* ── SculptPanel ─────────────────────────────────────────────────────────── */
@@ -232,11 +185,21 @@ function SculptPanel({
 export default function Studio() {
     const [availableMorphTargets, setAvailableMorphTargets] = useState<string[]>([]);
     const [sliderValues, setSliderValues] = useState<Record<string, number>>({});
-    // Closed on arrival: the subject sits centred in the frame, and the rail
-    // lamp pulses until it is opened. Opening slides the stage left, as in the
-    // app, rather than the head being drawn off-centre from the start.
+    const [light, setLight] = useState<LightSettings>(DEFAULT_LIGHT);
+    const [tool, setTool] = useState<StudioTool>('sculpt');
     const [panelOpen, setPanelOpen] = useState(false);
+    const [view, setView] = useState<StudioView>('single');
     const [, setModelReady] = useState(false);
+
+    // Both stages orbit as one — whichever is dragged publishes the pose here.
+    const shared = useRef(createSharedCamera()).current;
+
+    // The Original mounts on the FIRST compare view and then stays mounted
+    // (hidden in single view) — single-only sessions never pay for it.
+    const [everCompared, setEverCompared] = useState(false);
+    useEffect(() => {
+        if (view !== 'single') setEverCompared(true);
+    }, [view]);
 
     // Undo/redo over slider snapshots, as in the app's useUndoRedo.
     const past = useRef<Record<string, number>[]>([]);
@@ -280,10 +243,138 @@ export default function Studio() {
     const onTargets = useCallback((names: string[]) => setAvailableMorphTargets(names), []);
     const onReady = useCallback(() => setModelReady(true), []);
 
+    /* ── view switcher pill ───────────────────────────────────────────────── */
+    const tabRefs = useRef<Record<StudioView, HTMLButtonElement | null>>({
+        single: null,
+        split: null,
+        reveal: null,
+    });
+    const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+    useLayoutEffect(() => {
+        const el = tabRefs.current[view];
+        if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+    }, [view]);
+
+    /* ── reveal wipe ──────────────────────────────────────────────────────── */
+    const [wipe, setWipe] = useState(50);
+    const stageWrapRef = useRef<HTMLDivElement>(null);
+    const draggingWipe = useRef(false);
+
+    const wipeFromClientX = useCallback((clientX: number) => {
+        const rect = stageWrapRef.current?.getBoundingClientRect();
+        if (!rect || rect.width === 0) return;
+        setWipe(Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)));
+    }, []);
+
+    useEffect(() => {
+        const onMove = (e: PointerEvent) => {
+            if (!draggingWipe.current) return;
+            e.preventDefault();
+            wipeFromClientX(e.clientX);
+        };
+        const onUp = () => {
+            draggingWipe.current = false;
+        };
+        window.addEventListener('pointermove', onMove, { passive: false });
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+        return () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            window.removeEventListener('pointercancel', onUp);
+        };
+    }, [wipeFromClientX]);
+
+    /* ── per-view geometry (CSS only — the viewers never remount) ──────────── */
+    // `right`/`left` are spelled out because .st-stage sets inset: 0 — leaving
+    // one side to the class over-constrains the box and the half lands at 0.
+    const originalStyle: React.CSSProperties =
+        view === 'split'
+            ? { position: 'absolute', top: 0, bottom: 0, left: 0, right: 'auto', width: '50%' }
+            : view === 'reveal'
+              ? { position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - wipe}% 0 0)` }
+              : { position: 'absolute', inset: 0, visibility: 'hidden', pointerEvents: 'none' };
+
+    const primaryStyle: React.CSSProperties =
+        view === 'split'
+            ? { position: 'absolute', top: 0, bottom: 0, right: 0, left: 'auto', width: '50%' }
+            : view === 'reveal'
+              ? { position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${wipe}%)` }
+              : { position: 'absolute', inset: 0 };
+
+    const activeTool = TOOLS.find((t) => t.id === tool) ?? TOOLS[0];
+
     return (
-        <div className="studio-root" data-panel={panelOpen ? 'open' : 'closed'}>
+        <div className="studio-root" data-panel={panelOpen ? 'open' : 'closed'} data-view={view}>
             <div className="st-stage-glow" aria-hidden />
-            <ModelStage values={sliderValues} onTargets={onTargets} onReady={onReady} />
+
+            {/*
+             * Single view slides out from under the panel (see the stylesheet).
+             * The compare views can't: sliding far enough to clear the panel
+             * would carry the left half off the edge in a box this size, so
+             * they give the panel its width back instead and lay both halves
+             * out in what remains.
+             */}
+            <div
+                className="st-stagewrap"
+                ref={stageWrapRef}
+                style={view !== 'single' && panelOpen ? { right: PANEL_SPAN } : undefined}
+            >
+                {everCompared && (
+                    <ModelStage
+                        values={{}}
+                        light={light}
+                        shared={shared}
+                        className="st-stage"
+                        style={originalStyle}
+                    />
+                )}
+                <ModelStage
+                    values={sliderValues}
+                    light={light}
+                    shared={shared}
+                    onTargets={onTargets}
+                    onReady={onReady}
+                    className="st-stage"
+                    style={primaryStyle}
+                />
+
+                {view === 'split' && <span className="st-split-line" aria-hidden />}
+                {view === 'reveal' && (
+                    <>
+                        <span className="st-wipe-line" style={{ left: `${wipe}%` }} aria-hidden />
+                        <button
+                            type="button"
+                            className="st-wipe-handle"
+                            style={{ left: `${wipe}%` }}
+                            aria-label="Reveal position"
+                            role="slider"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(wipe)}
+                            onPointerDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                                draggingWipe.current = true;
+                                wipeFromClientX(e.clientX);
+                            }}
+                        >
+                            <SquareSplitHorizontal size={13} />
+                        </button>
+                    </>
+                )}
+                {view !== 'single' && (
+                    <>
+                        <span className="st-compare-tag" data-side="left">
+                            Original
+                        </span>
+                        <span className="st-compare-tag" data-side="right">
+                            Edited
+                        </span>
+                    </>
+                )}
+            </div>
 
             {/* Top chrome */}
             <div className="st-topbar">
@@ -297,12 +388,45 @@ export default function Studio() {
                             <span />
                             <span />
                         </span>
-                        <span className="st-patient-name">{PATIENT_NAME}</span>
                         <span className="st-tag">3D Consult</span>
                     </span>
                 </div>
 
                 <div className="st-actions st-glass">
+                    <div className="st-tabs" role="tablist" aria-label="View mode">
+                        {/* Sliding active pill (compositor transform — glides even
+                            while the view switch reflows the canvases). */}
+                        <span
+                            aria-hidden
+                            className="st-tab-pill"
+                            style={{
+                                width: pill?.width ?? 0,
+                                transform: `translateX(${pill?.left ?? 0}px)`,
+                                opacity: pill ? 1 : 0,
+                            }}
+                        />
+                        {VIEWS.map(({ id, label, Icon }) => (
+                            <button
+                                key={id}
+                                ref={(el) => {
+                                    tabRefs.current[id] = el;
+                                }}
+                                type="button"
+                                role="tab"
+                                aria-selected={view === id}
+                                data-active={view === id}
+                                className="st-tab"
+                                onClick={() => setView(id)}
+                                title={label}
+                            >
+                                <Icon size={14} />
+                                <span>{label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <span className="st-divider" aria-hidden />
+
                     <button
                         type="button"
                         className="st-icon-btn"
@@ -335,50 +459,68 @@ export default function Studio() {
                 </div>
             </div>
 
-            {/* Tool rail — Sculpt is the only tab this build carries. */}
+            {/* Tool rail — clicking the active tool collapses the panel, as in the app. */}
             <div className="st-rail st-glass">
-                <button
-                    type="button"
-                    className="st-rail-btn"
-                    data-active="true"
-                    onClick={() => setPanelOpen((o) => !o)}
-                    aria-label="Sculpt"
-                    aria-pressed
-                    data-hint={!panelOpen}
-                >
-                    <span className="st-rail-lamp" aria-hidden>
-                        <span>
-                            <span />
-                        </span>
-                    </span>
-                    <SlidersHorizontal size={18} strokeWidth={2.2} />
-                    <span className="st-rail-tip">
-                        {panelOpen ? 'Hide sculpt panel' : 'Show sculpt panel'}
-                    </span>
-                </button>
+                {TOOLS.map(({ id, label, Icon }) => {
+                    const active = tool === id;
+                    return (
+                        <button
+                            key={id}
+                            type="button"
+                            className="st-rail-btn"
+                            data-active={active}
+                            data-hint={!panelOpen && id === 'sculpt'}
+                            aria-label={label}
+                            aria-pressed={active}
+                            onClick={() => {
+                                if (active) setPanelOpen((o) => !o);
+                                else {
+                                    setTool(id);
+                                    setPanelOpen(true);
+                                }
+                            }}
+                        >
+                            {active && (
+                                <span className="st-rail-lamp" aria-hidden>
+                                    <span>
+                                        <span />
+                                    </span>
+                                </span>
+                            )}
+                            <Icon size={18} strokeWidth={2.2} />
+                            <span className="st-rail-tip">
+                                {active ? (panelOpen ? `Hide ${label.toLowerCase()} panel` : `Show ${label.toLowerCase()} panel`) : label}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* The one contextual surface */}
+            {/* The contextual surface */}
             {panelOpen && (
-                <section className="st-toolpanel st-panel" aria-label="Sculpt panel">
+                <section className="st-toolpanel st-panel" aria-label={`${activeTool.title} panel`}>
                     <div className="st-panel-head">
                         <div className="st-panel-head-left">
                             <span className="st-panel-icon st-inset">
-                                <SlidersHorizontal />
+                                <activeTool.Icon />
                             </span>
                             <div style={{ minWidth: 0 }}>
-                                <h2 className="st-panel-title">Sculpt</h2>
-                                <p className="st-panel-sub">Morph the anatomy in real time</p>
+                                <h2 className="st-panel-title">{activeTool.title}</h2>
+                                <p className="st-panel-sub">{activeTool.subtitle}</p>
                             </div>
                         </div>
                     </div>
                     <hr className="st-hairline" />
                     <div className="st-panel-body st-scroll">
-                        <SculptPanel
-                            sliderValues={sliderValues}
-                            availableMorphTargets={availableMorphTargets}
-                            onChange={commit}
-                        />
+                        {tool === 'sculpt' ? (
+                            <SculptPanel
+                                sliderValues={sliderValues}
+                                availableMorphTargets={availableMorphTargets}
+                                onChange={commit}
+                            />
+                        ) : (
+                            <LightingPanel light={light} onChange={setLight} />
+                        )}
                     </div>
                 </section>
             )}

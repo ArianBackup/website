@@ -76,3 +76,41 @@ export const Search: React.FC<Props> = (p) => (
         <path d="m21 21-4.3-4.3" />
     </Svg>
 );
+
+export const Maximize2: React.FC<Props> = (p) => (
+    <Svg {...p}>
+        <path d="M15 3h6v6" />
+        <path d="M9 21H3v-6" />
+        <path d="M21 3l-7 7" />
+        <path d="M3 21l7-7" />
+    </Svg>
+);
+
+export const Columns2: React.FC<Props> = (p) => (
+    <Svg {...p}>
+        <rect width="18" height="18" x="3" y="3" rx="2" />
+        <path d="M12 3v18" />
+    </Svg>
+);
+
+export const SquareSplitHorizontal: React.FC<Props> = (p) => (
+    <Svg {...p}>
+        <path d="M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h3" />
+        <path d="M16 5h3c1 0 2 1 2 2v10c0 1-1 2-2 2h-3" />
+        <path d="M12 4v16" />
+    </Svg>
+);
+
+export const Sun: React.FC<Props> = (p) => (
+    <Svg {...p}>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="m4.93 4.93 1.41 1.41" />
+        <path d="m17.66 17.66 1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="m6.34 17.66-1.41 1.41" />
+        <path d="m19.07 4.93-1.41 1.41" />
+    </Svg>
+);
