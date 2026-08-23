@@ -2,10 +2,11 @@
  * Morph-slider catalogue + helpers.
  *
  * The app ships 8 categories / 56 controls (components/panels/SliderPanel.tsx).
- * This demo carries the headline nose groups verbatim — Sculptr's core case —
- * and the resolution helpers from app/studio/lib/sliders.ts unchanged. Adding a
- * category back is just another entry in CATEGORIES; every label below drives a
- * morph target that exists on the sample head.
+ * This demo carries the nose groups — Sculptr's core case — plus the brow and
+ * jaw the seeded sculpt below touches, all verbatim, and the resolution helpers
+ * from app/studio/lib/sliders.ts unchanged. Adding a category back is just
+ * another entry in CATEGORIES; every label below drives a morph target that
+ * exists on the head.
  */
 
 export interface SliderDef {
@@ -62,7 +63,60 @@ export const CATEGORIES: SliderCategory[] = [
             { label: 'Nostril Width', morphTargets: ['Nostril Width', 'Nostril Width L', 'Nostril Width R'] },
         ],
     },
+    {
+        name: 'Nose Ridge',
+        sliders: [
+            { label: 'Nose Ridge Angle', morphTargets: ['Nose Ridge Angle'] },
+            { label: 'Nose Ridge Curve', morphTargets: ['Nose Ridge Curve'] },
+            { label: 'Nose Ridge Define', morphTargets: ['Nose Ridge Define'] },
+            { label: 'Nose Ridge Depth', morphTargets: ['Nose Ridge Depth'] },
+            { label: 'Nose Ridge Lower Define', morphTargets: ['Nose Ridge Lower Define'] },
+            { label: 'Nose Ridge Lower Depth', morphTargets: ['Nose Ridge Lower Depth'] },
+            { label: 'Nose Ridge Middle Depth', morphTargets: ['Nose Ridge Middle Depth'] },
+            { label: 'Nose Ridge Offset', morphTargets: ['Nose Ridge Offset'] },
+            { label: 'Nose Ridge Upper Define', morphTargets: ['Nose Ridge Upper Define'] },
+            { label: 'Nose Ridge Upper Depth', morphTargets: ['Nose Ridge Upper Depth'] },
+            { label: 'Nose Ridge Width', morphTargets: ['Nose Ridge Width'] },
+        ],
+    },
+    {
+        name: 'Brow',
+        sliders: [
+            { label: 'Brow Down Left', morphTargets: ['browDownLeft'] },
+            { label: 'Brow Down Right', morphTargets: ['browDownRight'] },
+            { label: 'Brow Inner Up', morphTargets: ['browInnerUp'] },
+            { label: 'Brow Outer Up Left', morphTargets: ['browOuterUpLeft'] },
+            { label: 'Brow Outer Up Right', morphTargets: ['browOuterUpRight'] },
+        ],
+    },
+    {
+        name: 'Jaw',
+        sliders: [
+            { label: 'Jaw Forward', morphTargets: ['jawForward'] },
+            { label: 'Jaw Left', morphTargets: ['jawLeft'] },
+            { label: 'Jaw Open', morphTargets: ['jawOpen'] },
+            { label: 'Jaw Right', morphTargets: ['jawRight'] },
+        ],
+    },
 ];
+
+/**
+ * The sculpt the head arrives with — a worked consult rather than an untouched
+ * scan, so the compare views have something to compare and the panel opens on
+ * real values. Keyed by morph target; anything absent is 0.
+ */
+export const SEED_SLIDERS: Record<string, number> = {
+    'Nose Depth': -31,
+    'Nose Height': -8,
+    'Nose Relative Depth': 24,
+    'Nose Scale': -35,
+    'Nose Upturn': 73,
+    'Nose Width': -3,
+    'Nose Ridge Curve': -32,
+    browOuterUpLeft: 30,
+    browOuterUpRight: 30,
+    jawForward: 33,
+};
 
 /** Targets that actually exist on the loaded mesh (fallback: declared list). */
 export function getEffectiveTargets(slider: SliderDef, available?: string[]): string[] {

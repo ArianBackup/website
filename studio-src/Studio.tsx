@@ -29,6 +29,7 @@ import {
     applySlider,
     getSliderValue,
     getVisibleCategories,
+    SEED_SLIDERS,
     zeroedValues,
     type SliderDef,
 } from './sliders';
@@ -184,7 +185,8 @@ function SculptPanel({
 
 export default function Studio() {
     const [availableMorphTargets, setAvailableMorphTargets] = useState<string[]>([]);
-    const [sliderValues, setSliderValues] = useState<Record<string, number>>({});
+    // The head arrives sculpted; the Original in compare views stays unedited.
+    const [sliderValues, setSliderValues] = useState<Record<string, number>>(SEED_SLIDERS);
     const [light, setLight] = useState<LightSettings>(DEFAULT_LIGHT);
     const [tool, setTool] = useState<StudioTool>('sculpt');
     const [panelOpen, setPanelOpen] = useState(false);
