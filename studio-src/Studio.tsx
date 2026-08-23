@@ -232,7 +232,10 @@ function SculptPanel({
 export default function Studio() {
     const [availableMorphTargets, setAvailableMorphTargets] = useState<string[]>([]);
     const [sliderValues, setSliderValues] = useState<Record<string, number>>({});
-    const [panelOpen, setPanelOpen] = useState(true);
+    // Closed on arrival: the subject sits centred in the frame, and the rail
+    // lamp pulses until it is opened. Opening slides the stage left, as in the
+    // app, rather than the head being drawn off-centre from the start.
+    const [panelOpen, setPanelOpen] = useState(false);
     const [, setModelReady] = useState(false);
 
     // Undo/redo over slider snapshots, as in the app's useUndoRedo.
@@ -278,7 +281,7 @@ export default function Studio() {
     const onReady = useCallback(() => setModelReady(true), []);
 
     return (
-        <div className="studio-root">
+        <div className="studio-root" data-panel={panelOpen ? 'open' : 'closed'}>
             <div className="st-stage-glow" aria-hidden />
             <ModelStage values={sliderValues} onTargets={onTargets} onReady={onReady} />
 
@@ -341,6 +344,7 @@ export default function Studio() {
                     onClick={() => setPanelOpen((o) => !o)}
                     aria-label="Sculpt"
                     aria-pressed
+                    data-hint={!panelOpen}
                 >
                     <span className="st-rail-lamp" aria-hidden>
                         <span>

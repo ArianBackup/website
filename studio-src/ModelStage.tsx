@@ -23,8 +23,6 @@ const CAMERA_Z = 3.5;
 const LIGHT_INTENSITY = 8;
 /** World height the head+shoulders are normalised to (visible height at z 3.5 / fov 22 is ~1.36). */
 const BUST_HEIGHT = 1.35;
-/** Push the subject left of centre, clear of the tool panel. */
-const SUBJECT_OFFSET_X = 0.18;
 
 export interface ModelStageProps {
     /** Morph-target keyed values, -100..100. */
@@ -61,7 +59,7 @@ export default function ModelStage({ values, onTargets, onReady }: ModelStagePro
 
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(FOV, width() / height(), 0.1, 100);
-        camera.position.set(SUBJECT_OFFSET_X, 0, CAMERA_Z);
+        camera.position.set(0, 0, CAMERA_Z);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
@@ -69,7 +67,7 @@ export default function ModelStage({ values, onTargets, onReady }: ModelStagePro
         controls.dampingFactor = 0.08;
         controls.minDistance = 1.6;
         controls.maxDistance = 6;
-        controls.target.set(SUBJECT_OFFSET_X, 0, 0);
+        controls.target.set(0, 0, 0);
 
         // Lighting rig, matching ModelViewer's default (non-"all angles") mode.
         const s = LIGHT_INTENSITY;
@@ -101,9 +99,10 @@ export default function ModelStage({ values, onTargets, onReady }: ModelStagePro
                     const m = child as THREE.Mesh;
                     if (m.isMesh && m.morphTargetDictionary && !mesh) mesh = m;
                 });
-                // Frame to match the app's composition: the bust fills the height
-                // (shoulders running off the bottom edge) and sits left of centre
-                // so the floating tool panel doesn't cover the face.
+                // Frame to match the app's composition: the bust fills the
+                // height, shoulders running off the bottom edge. Clearing the
+                // tool panel is the stage's job — it slides left when the panel
+                // opens, as in the app — so the subject itself stays centred.
                 const box = new THREE.Box3().setFromObject(root);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());

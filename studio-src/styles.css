@@ -365,6 +365,20 @@ input {
     background: rgba(0, 153, 255, 0.28);
     filter: blur(12px);
 }
+/*
+ * While the panel is closed the rail button breathes, so the one control that
+ * opens the sculpt tools reads as a control. Same gentle cycle as the desktop's
+ * Download CV halo: fully out at each end, the rail's own blue, off on hover.
+ */
+@keyframes st-rail-hint {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 153, 255, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.16), 0 0 14px 4px rgba(0, 153, 255, 0.34); }
+}
+.studio-root .st-rail-btn[data-hint='true'] { animation: st-rail-hint 2.26s ease-in-out infinite; }
+.studio-root .st-rail-btn[data-hint='true']:hover { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+    .studio-root .st-rail-btn[data-hint='true'] { animation: none; }
+}
 .studio-root .st-rail-tip {
     position: absolute;
     right: calc(100% + 14px);
@@ -769,7 +783,15 @@ input {
 .st-matches { padding: 12px 16px; }
 
 /* ---- stage ---- */
-.st-stage { position: absolute; inset: 0; }
+/*
+ * The stage slides left of the open tool panel with the same compositor
+ * transform the app uses (animating the canvas box would re-rasterize it every
+ * frame), by half the panel's width — panel 352 wide, so 176.
+ */
+.st-stage { position: absolute; inset: 0; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.studio-root[data-panel='open'] .st-stage { transform: translateX(-176px); }
+.studio-root .st-stage-glow { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.studio-root[data-panel='open'] .st-stage-glow { transform: translate(-50%, -50%) translateX(-176px); }
 .st-stage canvas { display: block; width: 100%; height: 100%; }
 
 .st-hint {

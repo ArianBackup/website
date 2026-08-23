@@ -533,19 +533,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * The Download CV button is easy to miss in a toolbar of XP chrome, so it
-     * gets a slow breathing halo. Deliberately gentle: it fades fully out at
-     * each end rather than sitting lit, holds the button's own blue instead of
-     * introducing a colour, and stops while hovered so it never fights the
-     * hover state. Honoured only when the viewer allows motion.
+     * Download CV and Visit site are easy to miss among XP chrome and a wall of
+     * project copy, so they get a slow breathing halo. Deliberately gentle: it
+     * fades fully out at each end rather than sitting lit, holds the buttons'
+     * own blue instead of introducing a colour, and stops while hovered so it
+     * never fights the hover state. Honoured only when the viewer allows motion.
      */
     var GLOW_CSS =
         '@keyframes af-cv-glow{' +
         '0%,100%{box-shadow:0 0 0 0 rgba(49,106,197,0),0 0 0 0 rgba(49,106,197,0)}' +
         '50%{box-shadow:0 0 0 2px rgba(49,106,197,0.22),0 0 9px 2px rgba(49,106,197,0.40)}}' +
-        '.af-cv-glow{animation:af-cv-glow 2.26s ease-in-out infinite;border-radius:4px}' +
+        '.af-cv-glow{animation:af-cv-glow 2.26s ease-in-out infinite}' +
         '.af-cv-glow:hover{animation:none}' +
+        // The XP toolbar button has square corners; the halo reads better with
+        // the same soft radius the rest of the chrome uses. The Visit site pill
+        // carries its own 20px radius, which the shadow already follows.
+        '.af-cv-glow-boxed{border-radius:4px}' +
         '@media (prefers-reduced-motion:reduce){.af-cv-glow{animation:none}}';
+
+    /** Buttons worth pointing at, and whether the halo needs a corner radius. */
+    var GLOW_LABELS = [
+        { text: 'Download CV', boxed: true },
+        { text: 'Visit site', boxed: false }
+    ];
 
     function ensureGlowStyle() {
         if (document.getElementById('af-cv-glow-style')) return;
@@ -555,14 +565,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         (document.head || document.documentElement).appendChild(style);
     }
 
-    function glowDownloadButton() {
+    function glowButtons() {
         ensureGlowStyle();
         var nodes = document.querySelectorAll('a,button,div');
         for (var i = 0; i < nodes.length; i++) {
             var el = nodes[i];
-            if ((el.textContent || '').trim() !== 'Download CV') continue;
             if (el.classList.contains('af-cv-glow')) continue;
-            el.classList.add('af-cv-glow');
+            var label = (el.textContent || '').trim();
+            for (var j = 0; j < GLOW_LABELS.length; j++) {
+                if (label !== GLOW_LABELS[j].text) continue;
+                el.classList.add('af-cv-glow');
+                if (GLOW_LABELS[j].boxed) el.classList.add('af-cv-glow-boxed');
+                break;
+            }
         }
     }
 
@@ -781,7 +796,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         inject();
         wireWheel();
         wireCvRows();
-        glowDownloadButton();
+        glowButtons();
         positionWallpaper();
         maximizeSculptr();
         mountStudio();
