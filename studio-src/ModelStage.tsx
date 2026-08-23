@@ -27,8 +27,8 @@ const MODEL_URL = 'guide-model.glb';
 const CAMERA_Z = 3.5;
 /** World height the head+shoulders are normalised to (visible height at z 3.5 / fov 22 is ~1.36). */
 const BUST_HEIGHT = 1.35;
-/** Drop the subject a fifth of its height, so the frame carries headroom above. */
-const SUBJECT_DROP = BUST_HEIGHT * 0.2;
+/** Drop the subject a tenth of its height, so the frame carries headroom above. */
+const SUBJECT_DROP = BUST_HEIGHT * 0.1;
 
 /** Camera pose shared by every stage on screen, so compare views orbit as one. */
 export interface SharedCamera {
