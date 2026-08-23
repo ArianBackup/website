@@ -12,6 +12,9 @@ const SCREEN_SIZE = { w: 1280, h: 1024 };
 // The desktop on the screen has a CRT treatment of its own, so this one is off
 // unless the viewer asks for it from the start menu.
 const CRT_EFFECT_KEY = 'arian-portfolio:crt-effect';
+// The desktop ships with this site (static/os -> public/os), so it is
+// same-origin and needs no separate deployment.
+const SCREEN_URL = '/os/index.html';
 const IFRAME_PADDING = 32;
 const IFRAME_SIZE = {
     w: SCREEN_SIZE.w - IFRAME_PADDING,
@@ -38,6 +41,7 @@ export default class MonitorScreen extends EventEmitter {
     videoTextures: { [key in string]: THREE.VideoTexture };
     iframe: HTMLIFrameElement;
     crtEffectMeshes: THREE.Mesh[];
+    screenBooted: boolean;
 
     constructor() {
         super();
@@ -54,10 +58,12 @@ export default class MonitorScreen extends EventEmitter {
         this.crtEffectMeshes = [];
         this.mouseClickInProgress = false;
         this.shouldLeaveMonitor = false;
+        this.screenBooted = false;
 
         // Create screen
         this.initializeScreenEvents();
         this.createIframe();
+        this.prefetchScreen();
         const maxOffset = this.createTextureLayers();
         this.createEnclosingPlanes(maxOffset);
         this.createPerspectiveDimmer(maxOffset);
@@ -122,6 +128,7 @@ export default class MonitorScreen extends EventEmitter {
                 this.inComputer = event.inComputer;
 
                 if (this.inComputer && !this.prevInComputer) {
+                    this.bootScreen();
                     this.camera.trigger('enterMonitor');
                 }
 
@@ -154,6 +161,9 @@ export default class MonitorScreen extends EventEmitter {
             (event) => {
                 // @ts-ignore
                 this.inComputer = event.inComputer;
+                // Belt and braces for anything that reaches the screen without
+                // a hover first.
+                if (this.inComputer) this.bootScreen();
                 this.application.mouse.trigger('mousedown', [event]);
 
                 this.mouseClickInProgress = true;
@@ -178,6 +188,35 @@ export default class MonitorScreen extends EventEmitter {
             },
             false
         );
+    }
+
+    /**
+     * Boots the desktop on the screen, once, when a viewer first goes to the
+     * computer. Loading it with the page would have the machine running — a
+     * bundled desktop, its videos and the studio's WebGL — behind a scene
+     * nobody has reached yet; this way the monitor sits dark until it is
+     * approached, and then starts up as a computer would.
+     *
+     * The document is prefetched (see prefetchScreen), so the boot is not
+     * waiting on the network by the time it is asked for.
+     */
+    bootScreen() {
+        if (this.screenBooted || !this.iframe) return;
+        this.screenBooted = true;
+        this.iframe.src = SCREEN_URL;
+    }
+
+    /**
+     * Warms the browser cache for the desktop without running it, so the boot
+     * above is instant. Deliberately low priority: the 3D scene the viewer is
+     * actually looking at comes first.
+     */
+    prefetchScreen() {
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'document';
+        link.href = SCREEN_URL;
+        document.head.appendChild(link);
     }
 
     /**
@@ -267,10 +306,8 @@ export default class MonitorScreen extends EventEmitter {
             });
         };
 
-        // Set iframe attributes
-        // The desktop ships with this site (static/os -> public/os), so it is
-        // same-origin and needs no separate deployment.
-        iframe.src = '/os/index.html';
+        // Set iframe attributes. The src is left off until someone actually
+        // goes to the computer — see bootScreen().
         iframe.style.width = this.screenSize.width + 'px';
         iframe.style.height = this.screenSize.height + 'px';
         iframe.style.padding = IFRAME_PADDING + 'px';
