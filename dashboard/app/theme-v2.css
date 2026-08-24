@@ -1,0 +1,760 @@
+/* =================================================================
+   theme-v2.css  —  SCOPED clone of the Sculptr (sculptrlabs.com) look
+   -----------------------------------------------------------------
+   Electric azure (#0099FF) -> deep navy (#0F398B) brand on a white,
+   film-grain base with a soft top blue glow. Hanken Grotesk type,
+   navy body text, matte liquid-glass buttons (HoverButton), floating
+   blur pill nav + centered footer.
+
+   Surfaces use a cool-neutral GREY matte-glass ladder (see "Matte-glass
+   ladder" below): hierarchy comes from the opacity/shade of the mattness,
+   stepped tier 1 (section) -> 2 (tile) -> 3 (raised). The page background
+   (white + glow + grain + dots) is intentionally left untouched.
+
+   Scoped under `.theme-v2` / `.theme-v2-tokens` only — nothing outside
+   /style-lab changes. `.theme-v2-tokens` = tokens only, for Radix
+   portal content (Select/Dialog/Dropdown/Tooltip).
+   ================================================================= */
+
+/* App font (Satoshi) is self-hosted via next/font/local in app/layout.tsx
+   (--font-satoshi); consumed by --font-hanken below. No external CDN. */
+
+/* ---- Tokens (no layout side effects) --------------------------- */
+.theme-v2,
+.theme-v2-tokens {
+  --background: #ffffff;
+  --foreground: #0f398b;            /* navy body text */
+
+  --card: var(--s2-bg);             /* frosted white-blue tile */
+  --card-foreground: #0f398b;
+  --popover: var(--s3-bg);          /* raised grey glass */
+  --popover-foreground: #0f398b;
+
+  --primary: #0099ff;               /* electric azure */
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--s2-bg);        /* matte grey tile */
+  --secondary-foreground: #0f398b;
+  --muted: var(--s1-bg);            /* faint grey section */
+  --muted-foreground: rgba(15, 57, 139, 0.62);
+  --accent: var(--si-bg-hover);     /* grey hover nudge */
+  --accent-foreground: #0f398b;
+
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(16, 24, 40, 0.10); /* neutral hairline */
+  --input: rgba(15, 57, 139, 0.14);
+  --ring: #0099ff;
+
+  --radius: 0.95rem;
+
+  /* brand scale */
+  --azure: #0099ff;
+  --azure-bright: #0088ff;
+  --cyan: #00bbff;
+  --navy: #0f398b;
+  --blue-mid: #1560bd;
+  --cyan-glow: rgba(0, 187, 255, 0.22);
+
+  /* ===== Liquid-glass ladder (truly translucent, neutral frosted) =====
+     Near-neutral white tint so panels share the page's hue (blend), LOW blur +
+     lower alpha so the dotted/grain paper genuinely reads THROUGH every panel
+     (true translucency). Depth comes from the layered shadows, not opacity. */
+  --s1-bg: rgba(251, 252, 255, 0.20);
+  --s1-blur: 7px;
+  --s1-border: rgba(255, 255, 255, 0.45);
+  --s1-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.55);
+  --s1-shadow: 0 1px 2px rgba(25, 45, 100, 0.08), 0 4px 10px -2px rgba(25, 45, 100, 0.10), 0 16px 30px -10px rgba(25, 45, 100, 0.16);
+  --s2-bg: rgba(251, 252, 255, 0.34);
+  --s2-blur: 9px;
+  --s2-border: rgba(255, 255, 255, 0.5);
+  --s2-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
+  --s2-shadow: 0 1px 2px rgba(25, 45, 100, 0.09), 0 6px 14px -2px rgba(25, 45, 100, 0.13), 0 22px 40px -12px rgba(25, 45, 100, 0.20);
+  --s3-bg: rgba(252, 253, 255, 0.50);
+  --s3-blur: 12px;
+  --s3-border: rgba(255, 255, 255, 0.6);
+  --s3-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.78);
+  --s3-shadow: 0 2px 6px rgba(25, 45, 100, 0.10), 0 12px 26px -4px rgba(25, 45, 100, 0.16), 0 36px 64px -16px rgba(25, 45, 100, 0.30);
+  --si-bg-hover: rgba(236, 240, 248, 0.55);   /* neutral interactive/hover nudge */
+  --glass-saturate: 150%;
+  --tile-radius: 28px;                         /* ~rounded-3xl, matches reference */
+  --kpi-grad: linear-gradient(135deg, #2f7be0 0%, #4f6fe0 45%, #7c5cd6 100%);
+
+  /* nav/footer surfaces */
+  --sidebar: var(--s1-bg);
+  --sidebar-foreground: #0f398b;
+  --sidebar-primary: #0099ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--si-bg-hover);
+  --sidebar-accent-foreground: #0f398b;
+  --sidebar-border: rgba(16, 24, 40, 0.10);
+  --sidebar-ring: #0099ff;
+
+  /* App font: self-hosted Satoshi via next/font/local (--font-satoshi, defined
+     in app/layout.tsx). Var name kept as --font-hanken so the body/headings/
+     settings/studio references don't need to change. */
+  --font-hanken: var(--font-satoshi), 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+
+  font-family: var(--font-hanken);
+  color: var(--foreground);
+  font-feature-settings: 'ss01', 'cv01';
+}
+
+/* ---- Full-page surface: white base + drifting blue glow + grain ----
+   Two viewport-fixed pseudo-layers, kept out of the content flow by
+   `isolation: isolate` (which scopes the negative z-index to .theme-v2):
+     ::before  z-index:-2  → soft blue "gradient blur" glow
+     ::after   z-index:-1  → film grain, layered on top of the glow
+   The glow is STATIC by default; it only drifts when the wrapper also has
+   `.bg-motion`. Motion is transform/opacity only (GPU-friendly) and can be
+   hard-disabled from the page via ANIMATED_BACKGROUND (see page.tsx). */
+.theme-v2 {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.30'/%3E%3C/svg%3E");
+  background-color: #ffffff;
+  position: relative;
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
+/* Soft top glow — faint azure, kept subtle so the dotted grain reads through. */
+.theme-v2::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 42% at 50% -2%, rgba(0, 153, 255, 0.14), transparent 70%),
+    radial-gradient(42% 38% at 88% 4%, rgba(0, 187, 255, 0.10), transparent 72%),
+    radial-gradient(40% 42% at 12% 6%, rgba(21, 96, 189, 0.08), transparent 72%);
+  filter: blur(22px);
+  will-change: transform;
+}
+
+/* Film grain, sitting above the glow but below all content. */
+.theme-v2::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-repeat: repeat;
+  background-size: 240px 240px;
+}
+
+/* Drifting brand particles (canvas) — above the glow + grain, below content.
+   Rendered by app/style-lab/particles-background.tsx; gated by ANIMATED_BACKGROUND. */
+.theme-v2 .ath-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Brand dot-grid pattern — sits beneath the grain (above the glow at -4). */
+.theme-v2 .ath-bg-pattern {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(40, 54, 88, 0.11) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+/* Motion is opt-in via `.bg-motion`, so the page can hard-disable it. */
+.theme-v2.bg-motion::before {
+  animation: theme-v2-drift 26s ease-in-out infinite;
+}
+
+/* Gentle drift + breathe. Scale stays >= 1 and translate returns to 0 at the
+   scale-1 keyframes, so an over-scaled (1.06) frame always covers the edges
+   while the resting frame sits exactly on them — never a transparent gap. */
+@keyframes theme-v2-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+  50% { transform: translate3d(-2%, 1.6%, 0) scale(1.06); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+}
+
+:is(.theme-v2, .theme-v2-tokens) :is(h1, h2, h3, h4) {
+  font-family: var(--font-hanken);
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+/* Owner preference — keep the whole app's type light. Remap the heavy font-weight
+   utilities under the app theme (covers every page + Radix portals via
+   .theme-v2-tokens) so nothing reads heavier than ~600. Tune here in one place. */
+:is(.theme-v2, .theme-v2-tokens) :is(.font-black, .font-extrabold, .font-bold) {
+  font-weight: 600 !important;
+}
+:is(.theme-v2, .theme-v2-tokens) .font-semibold {
+  font-weight: 500 !important;
+}
+
+/* ---- athli Buttons: pill shape; keep matte/quiet -------------- */
+:is(.theme-v2, .theme-v2-tokens) [data-slot='button'] {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Frosted secondary/outline — white glass, navy text */
+:is(.theme-v2, .theme-v2-tokens) .btn-glass {
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  color: var(--navy);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px 0 rgba(15, 57, 139, 0.05),
+    0 8px 22px -10px rgba(15, 57, 139, 0.22);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-glass:hover {
+  border-color: rgba(0, 153, 255, 0.45);
+  color: var(--azure);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+/* Brand ghost — hairline glass wash */
+:is(.theme-v2, .theme-v2-tokens) .btn-ghost-brand {
+  background: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--navy);
+  border: 1px solid rgba(120, 160, 220, 0.22);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-ghost-brand:hover {
+  border-color: rgba(0, 153, 255, 0.4);
+  color: var(--azure);
+  background: rgba(0, 153, 255, 0.08);
+}
+
+/* PRIMARY ("Solid token") — frosted azure pill, white text, azure inner-glow
+   ring (the "Get Access" look). Kept as the reference token in the style lab;
+   the app-wide primary CTA now uses .btn-haze-deep (below). */
+:is(.theme-v2, .theme-v2-tokens) .btn-glass-primary {
+  background: rgba(0, 132, 240, 0.55);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(120, 180, 255, 0.5);
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(12, 40, 100, 0.35);
+  box-shadow:
+    inset 0 0 0 1px rgba(170, 202, 255, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 12px 0 rgba(170, 202, 255, 0.30),
+    0 1px 3px 0 rgba(15, 57, 139, 0.20),
+    0 10px 26px -8px rgba(15, 57, 139, 0.40);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-glass-primary:hover {
+  background: rgba(0, 132, 240, 0.66);
+  border-color: rgba(150, 200, 255, 0.65);
+  box-shadow:
+    inset 0 0 0 1px rgba(170, 202, 255, 0.6),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 14px 0 rgba(170, 202, 255, 0.4),
+    0 14px 32px -8px rgba(15, 57, 139, 0.5);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-glass-primary:active { transform: scale(0.985); }
+
+/* HAZE DEEP — the app-wide primary CTA (default Button variant). Exact static
+   reproduction of the "Haze Deep" <HoverButton> in the style lab: translucent
+   #94D4FF glass fill, semibold white text, an inset light-blue ring + soft navy
+   drop carried on a mix-blend ::before, and a #94D4FF outer glow that grows on
+   hover. Values mirror app/style-lab/hover-button.tsx + the Haze Deep swatch.
+   (The pointer-following sheen is JS-only and stays in <HoverButton>.) */
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-deep {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0;
+  background: rgba(148, 212, 255, 0.75);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow:
+    0 0 10px 0 rgba(148, 212, 255, 0.45),
+    0 0 26px 6px rgba(148, 212, 255, 0.28);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-deep::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  box-shadow:
+    inset 0 0 0 1px rgba(170, 202, 255, 0.35),
+    inset 0 0 16px 0 rgba(170, 202, 255, 0.18),
+    inset 0 -3px 12px 0 rgba(170, 202, 255, 0.22),
+    0 1px 3px 0 rgba(15, 57, 139, 0.18),
+    0 8px 24px -6px rgba(15, 57, 139, 0.22);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-deep:hover {
+  box-shadow:
+    0 0 18px 4px rgba(148, 212, 255, 0.95),
+    0 0 40px 10px rgba(148, 212, 255, 0.6);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-deep:active::before { transform: scale(0.975); }
+
+/* HAZE LIGHT — the app-wide primary CTA (default Button variant). Static
+   single-element reproduction of the style lab's "Haze light" GlassButton
+   swatch (.glass-button--haze-light): pale-azure #78C4FF glass, navy text for
+   legibility, a bright inner top highlight + soft navy underglow, and a pale
+   azure outer glow that grows on hover. Values mirror the Haze light swatch in
+   app/style-lab/theme-v2.css. */
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-light {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0;
+  background: rgba(120, 196, 255, 0.6);
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  color: #0f398b;
+  font-weight: 600;
+  text-shadow: 0 0.06em 0.3em rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.75),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.5em -0.05em rgba(180, 224, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(125, 198, 255, 0.5),
+    0 0 1.2em 0 rgba(95, 178, 255, 0.36);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-light:hover {
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.82),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.78em -0.05em rgba(180, 224, 255, 0.92),
+    0 0.1em 0.95em 0 rgba(125, 198, 255, 0.68),
+    0 0 1.7em 0 rgba(95, 178, 255, 0.52);
+}
+:is(.theme-v2, .theme-v2-tokens) .btn-haze-light:active { transform: scale(0.985); }
+
+/* HAZE RED — the "Glass haze" rule, copied verbatim with the hue rotated
+   204deg -> 0deg. Identical geometry AND identical numbers to the blue: same
+   0.62 fill alpha, same blur, same five shadow layers, same white text; only
+   each colour's hue differs (saturation + lightness preserved exactly). Use
+   for delete/remove CTAs anywhere a haze button is used:
+     <Button className="btn-haze-red">Delete</Button>
+   `.btn-haze-light-red` and `.btn-glass-danger` are aliases of this style. */
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-red, .btn-haze-light-red, .btn-glass-danger) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0;
+  background: rgba(255, 0, 0, 0.62);
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 0.08em 0.35em rgba(110, 8, 8, 0.6);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.55),
+    inset 0 -0.18em 0.4em rgba(110, 8, 8, 0.32),
+    0 0 0.5em -0.05em rgba(255, 120, 120, 0.7),
+    0 0.1em 0.7em 0 rgba(255, 40, 40, 0.55),
+    0 0 1.2em 0 rgba(255, 0, 0, 0.4);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-red, .btn-haze-light-red, .btn-glass-danger):hover {
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.62),
+    inset 0 -0.18em 0.4em rgba(110, 8, 8, 0.32),
+    0 0 0.78em -0.05em rgba(255, 120, 120, 0.92),
+    0 0.1em 0.95em 0 rgba(255, 40, 40, 0.73),
+    0 0 1.7em 0 rgba(255, 0, 0, 0.56);
+}
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-red, .btn-haze-light-red, .btn-glass-danger):active { transform: scale(0.985); }
+
+/* DANGER — retired. `.btn-glass-danger` is now an ALIAS of the red glass haze
+   above (see the .btn-haze-red rules), so every destructive button in the app
+   shares one look. The old frosted-red definition is gone; the name is kept
+   only so any remaining/dynamic usage picks up the new style automatically. */
+
+/* Shared disabled + focus for all glass buttons */
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-deep, .btn-haze-light, .btn-haze-red, .btn-haze-light-red, .btn-glass-primary, .btn-glass, .btn-ghost-brand, .btn-glass-danger):disabled,
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-deep, .btn-haze-light, .btn-haze-red, .btn-haze-light-red, .btn-glass-primary, .btn-glass, .btn-ghost-brand, .btn-glass-danger)[aria-disabled='true'] {
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-deep, .btn-haze-light, .btn-glass-primary, .btn-glass, .btn-ghost-brand):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.35);
+}
+/* Destructive focus ring stays in the red family. */
+:is(.theme-v2, .theme-v2-tokens) :is(.btn-haze-red, .btn-haze-light-red, .btn-glass-danger):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 60, 66, 0.4);
+}
+
+/* =================================================================
+   Matte-glass surfaces — the grey ladder.
+   - Use .surface-section / .surface-tile / .surface-raised (aliases
+     .glass-1 / .glass-2 / .glass-3) on raw divs.
+   - .surface-row for list items; .surface-interactive for hover.
+   - A frosted container should hold NON-frosted children (set their bg to
+     a plain var(--sN-bg) without re-adding backdrop-filter) except where a
+     child must read as raised — never stack three blurs.
+   ================================================================= */
+:is(.theme-v2, .theme-v2-tokens) .surface-section,
+:is(.theme-v2, .theme-v2-tokens) .glass-1,
+:is(.theme-v2, .theme-v2-tokens) .glass-panel {
+  position: relative;
+  background: var(--s1-bg);
+  border: 1px solid var(--s1-border);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(var(--s1-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s1-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s1-highlight), var(--s1-shadow);
+}
+:is(.theme-v2, .theme-v2-tokens) .surface-tile,
+:is(.theme-v2, .theme-v2-tokens) .glass-2,
+:is(.theme-v2, .theme-v2-tokens) .glass-panel-sm {
+  position: relative;
+  background: var(--s2-bg);
+  border: 1px solid var(--s2-border);
+  border-radius: var(--tile-radius);
+  -webkit-backdrop-filter: blur(var(--s2-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s2-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s2-highlight), var(--s2-shadow);
+}
+:is(.theme-v2, .theme-v2-tokens) .surface-raised,
+:is(.theme-v2, .theme-v2-tokens) .glass-3 {
+  position: relative;
+  background: var(--s3-bg);
+  border: 1px solid var(--s3-border);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s3-highlight), var(--s3-shadow);
+}
+:is(.theme-v2, .theme-v2-tokens) .surface-row {
+  position: relative;
+  background: var(--s2-bg);
+  border: 1px solid var(--s2-border);
+  border-radius: 0.85rem;
+  -webkit-backdrop-filter: blur(14px) saturate(var(--glass-saturate));
+  backdrop-filter: blur(14px) saturate(var(--glass-saturate));
+  box-shadow: var(--s2-highlight), 0 2px 8px -2px rgba(25, 45, 100, 0.12), 0 8px 18px -8px rgba(25, 45, 100, 0.14);
+}
+:is(.theme-v2, .theme-v2-tokens) .surface-tile:hover,
+:is(.theme-v2, .theme-v2-tokens) .surface-interactive:hover {
+  background: var(--si-bg-hover);
+}
+
+/* Promote shadcn Cards to matte grey glass (tier 2 — the "$2.4B" tile) */
+:is(.theme-v2, .theme-v2-tokens) [data-slot='card'] {
+  background: var(--s2-bg);
+  border: 1px solid var(--s2-border);
+  -webkit-backdrop-filter: blur(var(--s2-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s2-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s2-highlight), var(--s2-shadow);
+}
+
+/* Floating blur pill nav */
+:is(.theme-v2, .theme-v2-tokens) .glass-nav {
+  background: var(--s1-bg);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid transparent;
+  transition: max-width .35s ease, padding .35s ease, background-color .35s ease,
+              border-color .35s ease, box-shadow .35s ease;
+}
+:is(.theme-v2, .theme-v2-tokens) .glass-nav.is-scrolled {
+  border-color: var(--border);
+  box-shadow: 0 8px 30px -8px rgba(16, 24, 40, 0.16);
+}
+
+/* ---- Feature panel — now matte grey raised glass (was navy gradient) -- */
+:is(.theme-v2, .theme-v2-tokens) .feature-card-blue {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 0.4rem);
+  background: var(--s3-bg);
+  border: 1px solid var(--s3-border);
+  color: var(--navy);
+  -webkit-backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s3-highlight), var(--s3-shadow);
+}
+:is(.theme-v2, .theme-v2-tokens) .feature-card-blue::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(58% 48% at 82% -12%, rgba(0, 153, 255, 0.08), transparent 70%);
+}
+
+/* ---- Accents -------------------------------------------------- */
+:is(.theme-v2, .theme-v2-tokens) .text-azure {
+  background-image: linear-gradient(110deg, var(--cyan), var(--azure) 45%, var(--navy));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Gradient KPI number (blue -> violet, matches the "$2.4B" reference) */
+:is(.theme-v2, .theme-v2-tokens) .kpi-number {
+  background-image: var(--kpi-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+:is(.theme-v2, .theme-v2-tokens) .logo-glow {
+  filter: drop-shadow(0 0 12px rgba(0, 136, 255, 0.4));
+}
+
+:is(.theme-v2, .theme-v2-tokens) .glow-ring {
+  box-shadow: 0 0 0 1px rgba(0, 153, 255, 0.16), 0 30px 80px -30px rgba(0, 120, 220, 0.45);
+}
+
+:is(.theme-v2, .theme-v2-tokens) .hairline-blue {
+  height: 1px;
+  border: 0;
+  background-image: linear-gradient(90deg, transparent, rgba(0, 153, 255, 0.5), transparent);
+}
+
+/* ---- Scroll progress bar + back-to-top ------------------------ */
+.theme-v2 .ath-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2.5px;
+  z-index: 60;
+  background: linear-gradient(90deg, var(--azure), var(--azure-bright), var(--cyan));
+  box-shadow: 0 0 12px var(--cyan-glow);
+  transition: width .08s linear;
+}
+.theme-v2 .ath-totop {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 55;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(43, 55, 80, 0.18);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 0 0 1px rgba(170, 202, 255, 0.4),
+    inset 0 -3px 12px 0 rgba(170, 202, 255, 0.25),
+    0 8px 24px -6px rgba(15, 57, 139, 0.3);
+  transition: opacity .25s ease, transform .25s ease, box-shadow .2s ease;
+}
+.theme-v2 .ath-totop:hover { box-shadow: inset 0 0 0 1px rgba(170, 202, 255, 0.55), 0 12px 30px -6px rgba(15, 57, 139, 0.4); }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.theme-v2, .theme-v2-tokens) * { transition: none !important; }
+  .theme-v2::before { animation: none !important; }
+}
+
+/* =============================================================================
+   GLASS BUTTON — Petr Knoll "Glass Button" port (21st.dev component, owner-provided).
+   Markup lives in ./glass-button.tsx. Self-contained so it renders correctly
+   regardless of utility-class cascade. Text colour + font are left to inherit the
+   theme, so callers set them via className (e.g. text-[#1560bd]).
+   Source: https://codepen.io/Petr-Knoll/pen/QwWLZdx
+   ========================================================================== */
+@property --angle-1 { syntax: "<angle>"; inherits: false; initial-value: -75deg; }
+@property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
+.theme-v2 { --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1); }
+
+.theme-v2 .glass-button-wrap {
+  position: relative; z-index: 2; border-radius: 999vw; background: transparent;
+  pointer-events: none; transition: all var(--anim--hover-time) var(--anim--hover-ease);
+}
+.theme-v2 .glass-button-shadow {
+  --shadow-cuttoff-fix: 2em; position: absolute;
+  width: calc(100% + var(--shadow-cuttoff-fix)); height: calc(100% + var(--shadow-cuttoff-fix));
+  top: calc(0% - var(--shadow-cuttoff-fix) / 2); left: calc(0% - var(--shadow-cuttoff-fix) / 2);
+  filter: blur(clamp(2px, 0.125em, 12px)); -webkit-filter: blur(clamp(2px, 0.125em, 12px));
+  overflow: visible; pointer-events: none;
+}
+.theme-v2 .glass-button-shadow::after {
+  content: ""; position: absolute; z-index: 0; inset: 0; border-radius: 999vw;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  width: calc(100% - var(--shadow-cuttoff-fix) - 0.25em);
+  height: calc(100% - var(--shadow-cuttoff-fix) - 0.25em);
+  top: calc(var(--shadow-cuttoff-fix) - 0.5em); left: calc(var(--shadow-cuttoff-fix) - 0.875em);
+  padding: 0.125em; box-sizing: border-box;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude; -webkit-mask-composite: xor;
+  transition: all var(--anim--hover-time) var(--anim--hover-ease); overflow: visible; opacity: 1;
+}
+.theme-v2 .glass-button {
+  --border-width: clamp(1px, 0.0625em, 4px);
+  all: unset; cursor: pointer; position: relative; isolation: isolate; font-size: 1rem;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0); pointer-events: auto; z-index: 3;
+  background: linear-gradient(-75deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  border-radius: 999vw;
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.2),
+    0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
+    0 0 0 0 rgba(255, 255, 255, 1);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px)); -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px));
+  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+}
+.theme-v2 .glass-button:hover {
+  transform: scale(0.975); backdrop-filter: blur(0.01em); -webkit-backdrop-filter: blur(0.01em);
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.25),
+    0 0 0.05em 0.1em inset rgba(255, 255, 255, 0.5),
+    0 0 0 0 rgba(255, 255, 255, 1);
+}
+.theme-v2 .glass-button .glass-button-text {
+  position: relative; display: block; user-select: none; -webkit-user-select: none;
+  letter-spacing: -0.05em; font-weight: 500; font-size: 1em;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-shadow: 0em 0.25em 0.05em rgba(0, 0, 0, 0.1);
+  transition: all var(--anim--hover-time) var(--anim--hover-ease);
+  padding-inline: 1.5em; padding-block: 0.875em;
+}
+.theme-v2 .glass-button:hover .glass-button-text { text-shadow: 0.025em 0.025em 0.025em rgba(0, 0, 0, 0.12); }
+.theme-v2 .glass-button::after {
+  content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw;
+  width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width));
+  top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2);
+  padding: var(--border-width); box-sizing: border-box;
+  background: conic-gradient(
+      from var(--angle-1) at 50% 50%,
+      rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 5% 40%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 60% 95%, rgba(0, 0, 0, 0.5)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5));
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude; -webkit-mask-composite: xor;
+  transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease;
+  box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5);
+}
+.theme-v2 .glass-button-wrap:has(.glass-button:hover) .glass-button-shadow {
+  filter: blur(clamp(2px, 0.0625em, 6px)); -webkit-filter: blur(clamp(2px, 0.0625em, 6px));
+  transition: filter var(--anim--hover-time) var(--anim--hover-ease);
+}
+.theme-v2 .glass-button-wrap:has(.glass-button:hover) .glass-button-shadow::after {
+  top: calc(var(--shadow-cuttoff-fix) - 0.875em); opacity: 1;
+}
+.theme-v2 .glass-button-wrap:has(.glass-button:active) { transform: rotate3d(1, 0, 0, 25deg); }
+.theme-v2 .glass-button-wrap:has(.glass-button:active) .glass-button {
+  box-shadow:
+    inset 0 0.125em 0.125em rgba(0, 0, 0, 0.05),
+    inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.5),
+    0 0.125em 0.125em -0.125em rgba(0, 0, 0, 0.2),
+    0 0 0.1em 0.25em inset rgba(255, 255, 255, 0.2),
+    0 0.225em 0.05em 0 rgba(0, 0, 0, 0.05),
+    0 0.25em 0 0 rgba(255, 255, 255, 0.75),
+    inset 0 0.25em 0.05em 0 rgba(0, 0, 0, 0.15);
+}
+.theme-v2 .glass-button-wrap:has(.glass-button:active) .glass-button-shadow { filter: blur(clamp(2px, 0.125em, 12px)); }
+.theme-v2 .glass-button-wrap:has(.glass-button:active) .glass-button-shadow::after { top: calc(var(--shadow-cuttoff-fix) - 0.5em); opacity: 0.75; }
+.theme-v2 .glass-button-wrap:has(.glass-button:active) .glass-button-text { text-shadow: 0.025em 0.25em 0.05em rgba(0, 0, 0, 0.12); }
+
+/* --- Haze variants: on-brand blue glass that glows. Three tones — light,
+   medium (default) and dark — share the same geometry (glass blur, glow reach
+   ~1.2em, inner glass-dome highlights); only the fill + glow + text colours
+   differ. Tune a tone by editing its `background` alpha (colour) and its
+   `0 0 …em` glow radii / alphas (more vs. tighter glow).
+   Use via className on the wrapper:
+     <GlassButton className="glass-button--haze-light">   (pale azure)
+     <GlassButton className="glass-button--haze">         (brand #0099FF)
+     <GlassButton className="glass-button--haze-dark">    (deep navy-blue) --- */
+.theme-v2 .glass-button--haze .glass-button,
+.theme-v2 .glass-button--haze-light .glass-button,
+.theme-v2 .glass-button--haze-red .glass-button,
+.theme-v2 .glass-button--haze-light-red .glass-button,
+.theme-v2 .glass-button--haze-dark .glass-button {
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+}
+
+/* medium — brand blue, white text */
+.theme-v2 .glass-button--haze .glass-button {
+  background: rgba(0, 153, 255, 0.62);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.55),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.32),
+    0 0 0.5em -0.05em rgba(120, 205, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(40, 150, 255, 0.55),
+    0 0 1.2em 0 rgba(0, 140, 255, 0.4);
+}
+.theme-v2 .glass-button--haze .glass-button-text {
+  color: #fff;
+  text-shadow: 0 0.08em 0.35em rgba(8, 40, 110, 0.6);
+}
+
+/* light — pale azure glass, navy text for legibility */
+.theme-v2 .glass-button--haze-light .glass-button {
+  background: rgba(120, 196, 255, 0.6);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.75),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.5em -0.05em rgba(180, 224, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(125, 198, 255, 0.5),
+    0 0 1.2em 0 rgba(95, 178, 255, 0.36);
+}
+.theme-v2 .glass-button--haze-light .glass-button-text {
+  color: rgba(21, 96, 189, 0.9);
+  font-weight: 650;
+  text-shadow: 0 0.08em 0.35em rgba(255, 255, 255, 0.55);
+}
+
+/* red — a LITERAL copy of the "medium" (Glass haze) rule above, with the hue
+   rotated 204deg -> 0deg. Every number is identical: same 0.62 fill alpha,
+   same five shadow layers with the same offsets/blur radii/alphas, same white
+   text. Only each colour's hue changed; saturation and lightness are
+   preserved exactly:
+     rgb(0,153,255)   -> rgb(255,0,0)       rgb(8,40,110)   -> rgb(110,8,8)
+     rgb(120,205,255) -> rgb(255,120,120)   rgb(40,150,255) -> rgb(255,40,40)
+     rgb(0,140,255)   -> rgb(255,0,0)                                        */
+.theme-v2 :is(.glass-button--haze-red, .glass-button--haze-light-red) .glass-button {
+  background: rgba(255, 0, 0, 0.62);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.55),
+    inset 0 -0.18em 0.4em rgba(110, 8, 8, 0.32),
+    0 0 0.5em -0.05em rgba(255, 120, 120, 0.7),
+    0 0.1em 0.7em 0 rgba(255, 40, 40, 0.55),
+    0 0 1.2em 0 rgba(255, 0, 0, 0.4);
+}
+.theme-v2 :is(.glass-button--haze-red, .glass-button--haze-light-red) .glass-button-text {
+  color: #fff;
+  text-shadow: 0 0.08em 0.35em rgba(110, 8, 8, 0.6);
+}
+
+/* dark — deep navy-blue glass, white text */
+.theme-v2 .glass-button--haze-dark .glass-button {
+  background: rgba(10, 55, 135, 0.8);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.4),
+    inset 0 -0.18em 0.4em rgba(2, 16, 56, 0.5),
+    0 0 0.5em -0.05em rgba(45, 120, 230, 0.7),
+    0 0.1em 0.7em 0 rgba(18, 86, 205, 0.55),
+    0 0 1.2em 0 rgba(8, 60, 170, 0.45);
+}
+.theme-v2 .glass-button--haze-dark .glass-button-text {
+  color: #fff;
+  text-shadow: 0 0.08em 0.35em rgba(2, 16, 56, 0.7);
+}

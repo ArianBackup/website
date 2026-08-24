@@ -1,0 +1,597 @@
+/* =================================================================
+   theme-app.css — app-wide layer on top of style-lab/theme-v2.css
+   -----------------------------------------------------------------
+   theme-v2 (azure -> navy brand, film grain + glow, matte liquid
+   glass) is now applied on <body>, so these rules style the actual
+   app chrome: glass sidebar/overlays, premium motion utilities,
+   frosted portals, inputs and tabs. Everything is keyed off
+   body.theme-v2 and degrades gracefully under reduced motion.
+   ================================================================= */
+
+/* ---- Chrome: floating glass sidebar rail ---------------------- */
+.theme-v2 [data-slot='sidebar-inner'] {
+  background: var(--s1-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--s1-border) !important;
+  border-radius: var(--tile-radius);
+  box-shadow: var(--s1-highlight), var(--s1-shadow);
+}
+
+/* Active nav item — azure glass pill */
+.theme-v2 [data-sidebar='menu-button'] {
+  border-radius: 0.65rem;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.theme-v2 [data-sidebar='menu-button']:active {
+  transform: scale(0.985);
+}
+.theme-v2 [data-sidebar='menu-button'][data-active='true'] {
+  background: rgba(0, 153, 255, 0.12);
+  color: var(--navy);
+  box-shadow: inset 0 0 0 1px rgba(0, 153, 255, 0.18);
+}
+
+/* ---- Frosted portals: dialogs, dropdowns, popovers, sheets (tier 3) -- */
+.theme-v2 :is(
+    [data-slot='dialog-content'],
+    [data-slot='alert-dialog-content'],
+    [data-slot='dropdown-menu-content'],
+    [data-slot='dropdown-menu-sub-content'],
+    [data-slot='popover-content'],
+    [data-slot='select-content'],
+    [data-slot='sheet-content']
+  ) {
+  background: var(--s3-bg);
+  -webkit-backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--s3-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--s3-border);
+  box-shadow: var(--s3-highlight), var(--s3-shadow);
+}
+
+/* ---- Inputs: quiet frosted grey fields (tier 1) ---------------- */
+.theme-v2 :is([data-slot='input'], [data-slot='textarea']) {
+  background: var(--s1-bg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-color: var(--border);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+.theme-v2 :is([data-slot='input'], [data-slot='textarea']):focus-visible {
+  background: var(--s2-bg);
+  border-color: rgba(0, 153, 255, 0.6);
+  /* Soft premium glow: a crisp 1px ring keeps the edge defined, then two
+     blurred azure halos bloom outward — replaces the old hard 4px band
+     (0 0 0 4px had zero blur, so it read as a flat ring, not a glow). */
+  box-shadow:
+    0 0 0 1px rgba(0, 153, 255, 0.28),
+    0 0 14px 1px rgba(0, 153, 255, 0.18),
+    0 4px 22px -4px rgba(0, 153, 255, 0.22);
+}
+
+/* ---- Tabs: glass pill list (tier 1 track, tier 3 active) ------- */
+.theme-v2 [data-slot='tabs-list'] {
+  background: var(--s1-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid var(--s1-border);
+  border-radius: 999px;
+  padding: 4px;
+}
+.theme-v2 [data-slot='tabs-trigger'] {
+  border-radius: 999px;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.theme-v2 [data-slot='tabs-trigger'][data-state='active'] {
+  background: var(--s3-bg);
+  color: var(--navy);
+  box-shadow: 0 4px 14px -6px rgba(16, 24, 40, 0.25);
+}
+
+/* ---- Tables: airy, navy headings, grey header + row hover ------ */
+.theme-v2 thead th {
+  color: rgba(15, 57, 139, 0.6);
+  font-weight: 600;
+}
+.theme-v2 tbody tr {
+  transition: background-color 0.16s ease;
+}
+.theme-v2 [data-slot='table-header'] {
+  background: var(--s1-bg);
+}
+.theme-v2 [data-slot='table-row']:hover {
+  background: var(--si-bg-hover);
+}
+
+/* ---- Skeletons shimmer on glass --------------------------------- */
+.theme-v2 [data-slot='skeleton'] {
+  background: rgba(16, 24, 40, 0.06);
+}
+
+/* =================================================================
+   Motion — premium, GPU-friendly entrances & micro-interactions
+   ================================================================= */
+@keyframes app-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes app-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Single-element entrance */
+.anim-rise {
+  animation: app-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+.anim-scale-in {
+  animation: app-scale-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered children — apply to a grid/list container */
+.stagger-children > * {
+  animation: app-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 30ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 70ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 110ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 190ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 230ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 270ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 310ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 390ms; }
+.stagger-children > *:nth-child(n + 11) { animation-delay: 430ms; }
+
+/* Hover lift for interactive cards/tiles */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+  will-change: transform;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    0 10px 22px -6px rgba(25, 45, 100, 0.20),
+    0 24px 44px -14px rgba(25, 45, 100, 0.24);
+}
+.hover-lift:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Azure gradient progress fill */
+.theme-v2 .bar-azure {
+  background: linear-gradient(90deg, var(--cyan), var(--azure) 60%, var(--azure-bright));
+  box-shadow: 0 0 10px rgba(0, 187, 255, 0.35);
+}
+
+/* Soft icon tile (used across stat cards) */
+.theme-v2 .icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+  background: var(--secondary);
+  color: var(--azure);
+}
+
+/* Thin, quiet scrollbars */
+.theme-v2 ::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.theme-v2 ::-webkit-scrollbar-thumb {
+  background: rgba(15, 57, 139, 0.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.theme-v2 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 57, 139, 0.3);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+.theme-v2 ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-scale-in,
+  .stagger-children > * {
+    animation: none !important;
+  }
+  .hover-lift,
+  .hover-lift:hover,
+  .hover-lift:active {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Billing period switcher ────────────────────────────────────────────
+   Styles for the pasted <fieldset class="switcher"> component. The snippet
+   shipped only the TSX, so this stylesheet is authored here: it lays the
+   options out, hides the radios, and slides a glass thumb behind the active
+   one, driven by the [data-previous] attribute the component already sets.
+
+   The thumb runs its backdrop through the component's own #switcher SVG
+   filter (the base64 displacement map), which is what gives the refracted
+   "liquid glass" edge. Browsers that reject url() in backdrop-filter drop the
+   whole declaration and fall back to the flat haze fill underneath. */
+
+:is(.theme-v2, .theme-v2-tokens) .switcher {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-auto-flow: column;
+  /* Equal columns keep the 50% thumb aligned even though "Yearly" carries an
+     extra badge and is therefore wider than "Monthly". */
+  grid-auto-columns: 1fr;
+  align-items: center;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--s2-border);
+  border-radius: 999px;
+  background: var(--s2-bg);
+  backdrop-filter: blur(var(--s2-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--s2-highlight), var(--s2-shadow);
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc((100% - 0.5rem) / 2);
+  border-radius: 999px;
+  background: rgba(120, 196, 255, 0.6);
+  backdrop-filter: url(#switcher) blur(clamp(1px, 0.125em, 4px)) saturate(195%)
+    brightness(1.05);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.75),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.5em -0.05em rgba(180, 224, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(125, 198, 255, 0.5),
+    0 0 1.2em 0 rgba(95, 178, 255, 0.36);
+  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* cOption "1" is the first slot, so it needs no offset. */
+:is(.theme-v2, .theme-v2-tokens) .switcher[data-previous='2']::before {
+  transform: translateX(100%);
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__option {
+  --c: currentColor;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding-inline: 0.75rem;
+  border-radius: 999px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  :is(.theme-v2, .theme-v2-tokens) .switcher__option {
+    height: 3rem;
+    padding-inline: 1.5rem;
+  }
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__option:hover,
+:is(.theme-v2, .theme-v2-tokens) .switcher__option:has(.switcher__input:checked) {
+  color: var(--navy);
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__option:has(.switcher__input:focus-visible) {
+  box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.35);
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+:is(.theme-v2, .theme-v2-tokens) .switcher__badge {
+  border-radius: 999px;
+  background: rgba(0, 153, 255, 0.12);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--azure);
+}
+
+/* The SVG filter host must not take up layout. */
+:is(.theme-v2, .theme-v2-tokens) .switcher__filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.theme-v2, .theme-v2-tokens) .switcher::before {
+    transition: none;
+  }
+}
+
+/* ── Plan wordmark ──────────────────────────────────────────────────────
+   A pricing tier can replace its text title with a supplied wordmark. The
+   image is applied as a MASK rather than drawn, so whatever colour it was
+   exported in is discarded and the letterforms are filled with the brand
+   gradient — a grey or white export works unchanged.
+
+   TWO ELEMENTS, AND IT HAS TO BE TWO. The glow sits on the wrapper and the
+   mask on the child inside it. CSS applies `filter` BEFORE `mask`, so a
+   drop-shadow set on the masked element itself is generated from the
+   unmasked box — a full-width gradient rectangle — and the mask then clips
+   it away, because a shadow lives precisely where the letterforms are not.
+   That renders pixel-for-pixel identical to no filter at all. Filtering the
+   parent runs the shadow over the child's already-masked output instead, so
+   it hugs the strokes of the script. Do not collapse these back into one
+   element; the glow silently disappears.
+
+   Kept deliberately faint — two wide, low-opacity passes rather than one
+   tight bright one. Neither pass is offset: a y offset would read as a drop
+   shadow under the script rather than a glow around it.
+
+   The gradient runs azure → navy, with cyan pulled off the left edge as a
+   highlight rather than a stop the mark actually sits in. Starting at cyan
+   made the script lighter than the azure tagline underneath it, which put
+   a title below its own subtitle in the visual hierarchy. */
+:is(.theme-v2, .theme-v2-tokens) .plan-wordmark {
+  display: block;
+  width: 100%;
+  filter: drop-shadow(0 0 10px rgba(0, 153, 255, 0.38))
+    drop-shadow(0 0 24px rgba(0, 153, 255, 0.28));
+}
+
+:is(.theme-v2, .theme-v2-tokens) .plan-wordmark__ink {
+  display: block;
+  width: 100%;
+  /* mask-size is `contain` and the mark is far wider than it is tall, so it
+     is always height-constrained — this height is the mark's actual scale. */
+  height: 3.9325rem;
+  background-image: linear-gradient(
+    105deg,
+    var(--cyan) -12%,
+    var(--azure) 22%,
+    var(--navy) 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: left center;
+  mask-position: left center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* On the featured card the sibling titles go white, so a blue-gradient mark
+   would all but vanish against the navy. Signature is not the featured tier
+   today, but `popular` is a one-line edit in plans.ts and this stops that
+   edit from silently blanking the title. */
+:is(.theme-v2, .theme-v2-tokens) .plan-wordmark--featured {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+}
+
+:is(.theme-v2, .theme-v2-tokens) .plan-wordmark--featured .plan-wordmark__ink {
+  background-image: none;
+  background-color: #fff;
+}
+
+/* ── Flagship "includes" markers ────────────────────────────────────────
+   The solid marker that separates a plan's flagship features from its
+   ordinary ones. Roughly half of each list is flagged, so the emphasis has
+   to sit in the marker and the type rather than in a container — a tint or
+   pill behind 5 of 10 rows stripes the list and makes the untreated rows
+   read as disabled.
+
+   Gradient rather than flat azure so the disc matches the plan wordmark and
+   the rest of the brand ramp. The glow is a box-shadow, not a drop-shadow
+   filter: this element has no mask on it, and box-shadow on a fully round
+   disc costs nothing to composite. */
+:is(.theme-v2, .theme-v2-tokens) .plan-check--hero {
+  background-image: linear-gradient(140deg, var(--cyan), var(--azure) 55%, var(--azure-bright));
+  box-shadow:
+    0 0 0 1px rgba(0, 153, 255, 0.28),
+    0 2px 8px var(--cyan-glow);
+}
+
+/* On the navy card the disc goes solid white with a navy check. Deliberately
+   an inversion rather than "more blue on blue" — that is where every tinted
+   treatment dies on this surface. */
+:is(.theme-v2, .theme-v2-tokens) .plan-check--hero-on-navy {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 2px 10px rgba(255, 255, 255, 0.22);
+}
+
+/* ── Flagship row: the light sweep ──────────────────────────────────────
+   A band of brighter brand colour travels left-to-right through the
+   flagship titles, every row in sync so the light crosses the whole card
+   as one wavefront. Light catching a polished surface —
+   the point is that it is barely there, and reads as quality rather than
+   as an animation demanding attention.
+
+   HOW IT MOVES. The gradient is 300% of the text width with the bright
+   band at its centre, so at either end of the travel the visible third is
+   flat brand colour. Sweeping background-position 100% -> 0% slides the
+   image rightwards under the text, carrying the band left to right. The
+   keyframes then HOLD at 0% for the rest of the cycle, so the jump back to
+   the start is invisible: both ends paint identical flat colour.
+
+   THE TRAVEL MUST STAY INSIDE 0%-100%. Overshooting (110%, -10%) leaves a
+   strip of the box uncovered by this no-repeat image, and an uncovered
+   strip is TRANSPARENT — which, with -webkit-text-fill-color: transparent,
+   means those glyphs disappear completely rather than merely changing
+   shade. At 0% and 100% a 300% image still covers the box exactly, so
+   these two values are the limits, not stylistic choices.
+
+   The animation runs on background-position, which repaints rather than
+   compositing. That is affordable here because the painted area is a few
+   short lines of text, but do not lift this onto anything large. */
+@keyframes plan-hero-sheen {
+  0% {
+    background-position: 100% 50%;
+  }
+  52% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Marker catches the light as the sweep passes it. Same delay, so the disc
+   brightens just as the band leaves the left edge of its row. */
+@keyframes plan-hero-spark {
+  0%,
+  22%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 153, 255, 0.28),
+      0 2px 8px var(--cyan-glow);
+  }
+  8% {
+    box-shadow:
+      0 0 0 1px rgba(0, 153, 255, 0.5),
+      0 2px 16px rgba(0, 187, 255, 0.6);
+  }
+}
+
+@keyframes plan-hero-spark-navy {
+  0%,
+  22%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 2px 10px rgba(255, 255, 255, 0.22);
+  }
+  8% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.9),
+      0 2px 18px rgba(255, 255, 255, 0.55);
+  }
+}
+
+/* Fallback first: without background-clip support the title is simply solid
+   brand colour. The @supports gate matters — `-webkit-text-fill-color:
+   transparent` with no clipped background to show through would render the
+   text INVISIBLE, so the enhancement must never apply unguarded. */
+:is(.theme-v2, .theme-v2-tokens) .plan-hero-title {
+  color: var(--navy);
+}
+:is(.theme-v2, .theme-v2-tokens) .plan-hero-title--on-navy {
+  color: #fff;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  :is(.theme-v2, .theme-v2-tokens) .plan-hero-title {
+    background-image: linear-gradient(
+      100deg,
+      var(--navy) 0%,
+      var(--navy) 42%,
+      var(--azure) 47%,
+      var(--cyan) 50%,
+      var(--azure) 53%,
+      var(--navy) 58%,
+      var(--navy) 100%
+    );
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: plan-hero-sheen 4.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+
+  /* On navy the band must be a COLOUR shift, not a brightness one. The base
+     text here is pure white — already the brightest thing available — so a
+     near-white flare (the first attempt used #b8e6ff/#eaf8ff) is actually
+     slightly DARKER than the base and reads as nothing at all: measured, it
+     moved the ink mean by ~3%, against a clearly visible shift on the pale
+     cards. A saturated cyan streak is the version you can actually see. */
+  :is(.theme-v2, .theme-v2-tokens) .plan-hero-title--on-navy {
+    background-image: linear-gradient(
+      100deg,
+      #fff 0%,
+      #fff 42%,
+      #6ad6ff 47%,
+      var(--cyan) 50%,
+      #6ad6ff 53%,
+      #fff 58%,
+      #fff 100%
+    );
+  }
+}
+
+:is(.theme-v2, .theme-v2-tokens) .plan-check--hero {
+  animation: plan-hero-spark 4.2s ease-out infinite;
+}
+:is(.theme-v2, .theme-v2-tokens) .plan-check--hero-on-navy {
+  animation: plan-hero-spark-navy 4.2s ease-out infinite;
+}
+
+/* Ambient decoration, so it goes entirely. The titles fall back to the flat
+   brand colour set above and stay perfectly legible. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.theme-v2, .theme-v2-tokens) .plan-hero-title,
+  :is(.theme-v2, .theme-v2-tokens) .plan-check--hero,
+  :is(.theme-v2, .theme-v2-tokens) .plan-check--hero-on-navy {
+    animation: none;
+  }
+  :is(.theme-v2, .theme-v2-tokens) .plan-hero-title {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}

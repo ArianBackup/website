@@ -1,0 +1,2384 @@
+/* =================================================================
+   assistant.css — the complete design kit for the Personal Assistant
+   portal (/assistant).
+
+   Self-contained ON PURPOSE. This surface will be lifted into its own
+   repository later, so it carries its own token block (values mirrored
+   from Sculptr's theme-v2 so it reads as the same product today) and
+   its own `.pa-*` component classes rather than borrowing the
+   `.sl-*` / `.pl-*` kits from settings-lab.css / patients.css.
+
+   Everything is scoped under `.assistant-shell`, except the portal
+   reset at the very bottom (dialogs render outside the shell).
+
+   ---------------------------------------------------------------
+   LIGHT AND DARK
+   ---------------------------------------------------------------
+   Dark mode is driven by `data-pa-theme="dark"` on the <html> element,
+   NOT by a global `.dark` class: the host app's layout runs an inline
+   script that force-removes `.dark` on every load, so a `.dark` class
+   would be stripped before it ever applied. Our own attribute is left
+   alone, can be set by a blocking inline script (so there is no flash of
+   light on load), and reaches dialog portals — which render outside the
+   shell but still inside <html>.
+
+   Token names are deliberately UNCHANGED between the two themes —
+   `--pa-navy` is "primary ink", and in dark mode it resolves to a near
+   white. That reads oddly in isolation but it is what lets several
+   hundred `text-[color:var(--pa-navy)]` call sites across the views
+   flip themes with no edit at all. Treat the names as semantic.
+
+   ---------------------------------------------------------------
+   MATERIAL RULES (inherited from the house style)
+   ---------------------------------------------------------------
+     - Depth comes from LAYERED shadows + an inset top highlight, never
+       from a flat neutral border-only box.
+     - A frosted container holds NON-frosted children. Never stack blurs.
+     - Panels inside a motion/transform wrapper must NOT use
+       backdrop-filter (a transform ancestor silently disables it) — they
+       use a light fill instead so the stage reads through.
+   ================================================================= */
+
+/* ---------------------------------------------------------------
+   Tokens — light (the default)
+   --------------------------------------------------------------- */
+.assistant-shell {
+  /* brand — constant across themes */
+  --pa-azure: #0099ff;
+  --pa-cyan: #00bbff;
+  --pa-violet: #7c5cd6;
+
+  /* ink */
+  --pa-navy: #0f398b; /* primary ink */
+  --pa-muted: rgba(15, 57, 139, 0.62);
+  --pa-faint: rgba(15, 57, 139, 0.44);
+
+  /* hairlines + edges */
+  --pa-line: rgba(15, 57, 139, 0.1);
+  --pa-line-soft: rgba(15, 57, 139, 0.07);
+  --pa-edge: rgba(255, 255, 255, 0.55); /* the lit edge on a surface */
+  --pa-edge-soft: rgba(255, 255, 255, 0.45);
+
+  /* surfaces, in the order they stack */
+  --pa-panel: rgba(255, 255, 255, 0.51);
+  --pa-card: rgba(255, 255, 255, 0.35);
+  --pa-card-hover: rgba(255, 255, 255, 0.52);
+  --pa-tile: rgba(252, 253, 255, 0.55);
+  --pa-row-hover: rgba(255, 255, 255, 0.78);
+  --pa-well: rgba(15, 57, 139, 0.03);
+  --pa-frost: rgba(251, 252, 255, 0.2);
+  --pa-solid: rgba(255, 255, 255, 0.96); /* dialog panels — near opaque */
+  --pa-hover-wash: rgba(255, 255, 255, 0.6);
+  --pa-sunken: rgba(15, 57, 139, 0.09);
+
+  /* accent washes */
+  --pa-accent-bg: rgba(0, 153, 255, 0.1);
+  --pa-accent-bg-strong: rgba(0, 153, 255, 0.16);
+  --pa-accent-ring: rgba(0, 153, 255, 0.22);
+  --pa-accent-border: rgba(0, 153, 255, 0.35);
+  --pa-accent-glow: rgba(0, 153, 255, 0.12);
+
+  /* Dragged-over text. Its own token rather than a reuse of `--pa-accent-bg`:
+     every other accent wash sits UNDER ink that was already legible, while this
+     one has to stay legible itself at whatever alpha it lands on, so it is
+     tuned against the ink instead of against the surface. */
+  --pa-select: rgba(0, 153, 255, 0.28);
+
+  /* Accent ink — the colour of TEXT that wants to read as branded: eyebrows,
+     the search label, azure badges. Separate from `--pa-azure` on purpose. The
+     accent itself stays blue in both themes because it carries rings, chips,
+     the progress arc and every other non-text mark; only the lettering follows
+     this token, which goes neutral on the dark stage where blue type reads as a
+     link rather than as a label. */
+  --pa-ink-accent: color-mix(in srgb, var(--pa-azure) 78%, var(--pa-navy));
+
+  /* the inset top highlight applied to most surfaces */
+  --pa-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* signature gradients */
+  --pa-grad: linear-gradient(160deg, #0099ff, #0f398b);
+  --pa-grad-kpi: linear-gradient(135deg, #2f7be0 0%, #4f6fe0 45%, #7c5cd6 100%);
+  --pa-grad-meter: linear-gradient(90deg, #00bbff 0%, #0099ff 45%, #2f7be0 100%);
+
+  /* status */
+  --pa-green: #0f9d6e;
+  --pa-green-bg: rgba(16, 185, 129, 0.14);
+  --pa-amber: #b4761f;
+  --pa-amber-bg: rgba(212, 165, 116, 0.2);
+  --pa-red: #c9564f;
+  --pa-red-bg: rgba(229, 72, 77, 0.12);
+  --pa-flame-bg: linear-gradient(135deg, rgba(255, 149, 0, 0.16), rgba(255, 94, 0, 0.12));
+  --pa-flame-ink: #c2620a;
+
+  /* elevation */
+  --pa-shadow-sm: var(--pa-highlight), 0 8px 22px -18px rgba(15, 57, 139, 0.35);
+  --pa-shadow: var(--pa-highlight), 0 10px 26px -20px rgba(15, 57, 139, 0.74);
+  --pa-shadow-lg: var(--pa-highlight), 0 16px 40px -28px rgba(15, 57, 139, 0.62);
+  --pa-shadow-xl: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 22px 44px -24px rgba(15, 57, 139, 0.93);
+
+  /* heatmap ramp */
+  --pa-heat-0: rgba(15, 57, 139, 0.06);
+  --pa-heat-1: rgba(0, 153, 255, 0.28);
+  --pa-heat-2: rgba(0, 153, 255, 0.52);
+  --pa-heat-3: rgba(0, 153, 255, 0.78);
+  --pa-heat-4: #0f398b;
+
+  --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- the gutter ----
+     The band of stage between the edge of the viewport and the edge of the
+     column of panels. The column is `mx-auto max-w-7xl` with `lg:px-8`, so:
+
+       gutter = (100vw - 1180px) / 2 + 32px
+
+     Both fixed widgets — the brief card on the left, the globe on the right —
+     size AND position themselves from this, which is what keeps them a matched
+     pair rather than two things that happen to sit near the same corners. */
+  --pa-gutter: calc((100vw - 1180px) / 2 + 32px);
+
+  position: relative;
+  min-height: 100svh;
+  width: 100%;
+  /* `clip`, not `hidden`. They clip identically, but `overflow-x: hidden`
+     forces `overflow-y` to compute to `auto`, which quietly makes the shell a
+     scroll container — and then every `position: sticky` inside it measures
+     against the shell instead of the viewport and never engages. The review
+     view's `sticky top-2` header was the symptom. `clip` creates no
+     scrollport, so sticky works and nothing can be scrolled sideways to. */
+  overflow-x: clip;
+  font-family: var(--font-hanken, var(--font-satoshi), system-ui, -apple-system, sans-serif);
+  color: var(--pa-navy);
+  background: transparent; /* the global white + glow + dot-grid stage shows through */
+  font-feature-settings: 'ss01', 'cv01';
+  transition: color 0.3s ease;
+}
+
+/* ---------------------------------------------------------------
+   Selected text
+
+   The browser default is a flat system blue that belongs to no theme in
+   particular — it reads as chrome breaking through the page, and on the
+   dark stage it is a bright slab. This is the brand azure at an alpha
+   tuned per theme, with the ink restated so it never inherits whatever
+   the default would have picked.
+
+   BOTH selectors are needed and neither is redundant: `::selection` on
+   the shell itself covers text nodes that are direct children of it,
+   and the descendant form covers everything nested. Written as one
+   selector list, one dropped-out arm would take the whole rule down in
+   an older engine, but the pseudo-element is universally supported now
+   and `-webkit-text-fill-color` is harmless where it is not read.
+
+   `-webkit-text-fill-color` is the load-bearing part. `.pa-stat` and the
+   other gradient figures paint their glyphs by clipping a background to
+   the text and setting the fill to transparent; a selection that only
+   set `color` left those numbers invisible while highlighted, because
+   the fill still won. Restating it hands the glyphs back a solid ink for
+   as long as they are selected.
+   --------------------------------------------------------------- */
+.assistant-shell::selection,
+.assistant-shell ::selection {
+  background: var(--pa-select);
+  color: var(--pa-navy);
+  -webkit-text-fill-color: var(--pa-navy);
+  text-shadow: none;
+}
+
+/* ---------------------------------------------------------------
+   Tokens — dark
+
+   Not an inversion. The brand is navy/azure, so the dark stage is a deep
+   navy-black rather than neutral grey, surfaces are low-alpha white lifts
+   over it, and the accent brightens slightly to hold contrast.
+   --------------------------------------------------------------- */
+:root[data-pa-theme='dark'] .assistant-shell {
+  --pa-azure: #35abff;
+  --pa-cyan: #4fd0ff;
+  --pa-violet: #a78bfa;
+
+  --pa-navy: #e9eefc;
+  --pa-muted: rgba(233, 238, 252, 0.64);
+  --pa-faint: rgba(233, 238, 252, 0.42);
+
+  --pa-line: rgba(255, 255, 255, 0.1);
+  --pa-line-soft: rgba(255, 255, 255, 0.06);
+  --pa-edge: rgba(255, 255, 255, 0.09);
+  --pa-edge-soft: rgba(255, 255, 255, 0.07);
+
+  /* ---- surfaces ----
+     The PANEL stays a low-alpha white lift: it is the layer the London map
+     underneath is supposed to read through, and that is the theme.
+
+     Everything nested INSIDE one is a semi-opaque navy plate instead. As white
+     lifts they were 4–9% over a panel that is itself two thirds transparent,
+     so roughly a third of the map arrived at the top of the stack and a tile,
+     a row and the panel behind them all carried the same streets — nothing
+     read as sitting ON anything. These are matte enough to cut that to about a
+     tenth, and are mixed slightly LIGHTER than the panel so the hierarchy
+     still runs outward-dark to inward-light.
+
+     Lighter is also what keeps dialogs right: `.pa-sheet` is near-opaque, and
+     a tile drawn on one has to lift off it rather than punch a hole in it. */
+  --pa-panel: rgba(255, 255, 255, 0.045);
+  --pa-card: rgba(26, 37, 65, 0.6);
+  --pa-card-hover: rgba(36, 50, 84, 0.75);
+  --pa-tile: rgba(29, 41, 70, 0.68);
+  --pa-row-hover: rgba(40, 55, 90, 0.82);
+  --pa-well: rgba(0, 0, 0, 0.22);
+  --pa-frost: rgba(14, 22, 44, 0.55);
+  --pa-solid: rgba(18, 27, 50, 0.97);
+  --pa-hover-wash: rgba(255, 255, 255, 0.07);
+  --pa-sunken: rgba(0, 0, 0, 0.35);
+
+  --pa-accent-bg: rgba(53, 171, 255, 0.16);
+  --pa-accent-bg-strong: rgba(53, 171, 255, 0.24);
+  --pa-accent-ring: rgba(53, 171, 255, 0.34);
+  --pa-accent-border: rgba(53, 171, 255, 0.45);
+  --pa-accent-glow: rgba(53, 171, 255, 0.18);
+
+  /* Heavier than the light stage's. The same alpha over a near-black ground
+     lands a long way from the light ink that has to sit on it, and the map
+     showing through the surfaces underneath is competing with it besides. */
+  --pa-select: rgba(53, 171, 255, 0.42);
+
+  /* Neutral: no blue lettering on the dark stage. See the light block. */
+  --pa-ink-accent: var(--pa-muted);
+
+  --pa-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  --pa-grad: linear-gradient(160deg, #35abff, #1b4fb5);
+  --pa-grad-kpi: linear-gradient(135deg, #63b5ff 0%, #8aa2ff 45%, #b79bff 100%);
+  --pa-grad-meter: linear-gradient(90deg, #4fd0ff 0%, #35abff 45%, #6f8dff 100%);
+
+  --pa-green: #34d399;
+  --pa-green-bg: rgba(52, 211, 153, 0.16);
+  --pa-amber: #f0b46a;
+  --pa-amber-bg: rgba(240, 180, 106, 0.16);
+  --pa-red: #ff8a84;
+  --pa-red-bg: rgba(255, 138, 132, 0.16);
+  --pa-flame-bg: linear-gradient(135deg, rgba(255, 168, 60, 0.22), rgba(255, 110, 40, 0.16));
+  --pa-flame-ink: #ffb86b;
+
+  --pa-shadow-sm: var(--pa-highlight), 0 8px 22px -18px rgba(0, 0, 0, 0.9);
+  --pa-shadow: var(--pa-highlight), 0 12px 28px -20px rgba(0, 0, 0, 0.95);
+  --pa-shadow-lg: var(--pa-highlight), 0 20px 44px -28px rgba(0, 0, 0, 1);
+  --pa-shadow-xl: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 28px 56px -26px rgba(0, 0, 0, 1);
+
+  --pa-heat-0: rgba(255, 255, 255, 0.07);
+  --pa-heat-1: rgba(53, 171, 255, 0.3);
+  --pa-heat-2: rgba(53, 171, 255, 0.55);
+  --pa-heat-3: rgba(53, 171, 255, 0.8);
+  --pa-heat-4: #7cc7ff;
+
+  color-scheme: dark;
+}
+
+/* The dark stage. Only painted for the page-level shell (`.pa-stage`) —
+   a shell inside a dialog portal must not repaint the whole viewport. */
+/* The base colour is painted on the SHELL, which is as tall as the document,
+   while the glow and dot grid below are viewport-fixed. Leaving the base to the
+   fixed layer alone would light up only the first screenful and let the host's
+   white body show through everything past the fold. Scoped to `.pa-stage` so
+   setting the attribute can never darken the rest of the host app. */
+:root[data-pa-theme='dark'] .assistant-shell.pa-stage {
+  isolation: isolate;
+  background-color: #070d1c;
+}
+:root[data-pa-theme='dark'] .assistant-shell.pa-stage::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(125% 72% at 50% -12%, rgba(0, 153, 255, 0.2), transparent 62%),
+    radial-gradient(90% 55% at 88% 8%, rgba(124, 92, 214, 0.14), transparent 60%),
+    #070d1c;
+}
+/* Dot grid, matching the light stage's 20px rhythm. */
+:root[data-pa-theme='dark'] .assistant-shell.pa-stage::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+/* ---------------------------------------------------------------
+   The map stage — `data-pa-stage='map'`
+
+   The ground dark mode stands on. The DARK ink family (the store writes
+   `data-pa-theme='dark'` alongside this attribute, so every rule above
+   applies to it untouched) on a live map of London instead of on the
+   navy ground. Only what has to change is restated here.
+
+   The two attributes always move together now — there is no plain navy
+   dark any more — but they stay separate so the ink can be read without
+   reference to what it is standing on. See lib/theme.ts.
+   --------------------------------------------------------------- */
+
+/* The map layer itself. Negative z-index so it paints under everything in
+   the shell but still above the shell's own background-color, which is what
+   carries first paint and what is left if WebGL is unavailable.
+
+   `.assistant-shell > *` sets `position: relative; z-index: 1` on every direct
+   child; this selector outranks it rather than relying on source order, since
+   a relatively-positioned map would scroll away with the document. */
+.assistant-shell .pa-map-stage {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s var(--pa-ease);
+}
+.assistant-shell .pa-map-stage[data-ready='true'] {
+  opacity: 1;
+}
+
+/* The OSM and CARTO credits take their clicks back — the layer is inert, the
+   attribution is not optional. */
+.assistant-shell .pa-map-stage .maplibregl-ctrl-attrib {
+  pointer-events: auto;
+  background: rgba(7, 13, 28, 0.62);
+  border-radius: 999px;
+  color: rgba(233, 238, 252, 0.6);
+  font-size: 10px;
+}
+.assistant-shell .pa-map-stage .maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+/* The scrim. Same two brand glows as the dark stage, but the ground under them
+   is a veil rather than an opaque fill, so London reads through it. It leans
+   darker toward the bottom, where the long scrolling lists are. */
+:root[data-pa-stage='map'] .assistant-shell.pa-stage::before {
+  background:
+    radial-gradient(125% 72% at 50% -12%, rgba(0, 153, 255, 0.16), transparent 62%),
+    radial-gradient(90% 55% at 88% 8%, rgba(124, 92, 214, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(7, 13, 28, 0.44) 0%, rgba(7, 13, 28, 0.66) 100%);
+}
+
+/* No dot grid over a map. The grid exists to give an empty ground some texture;
+   here the ground has streets. */
+:root[data-pa-stage='map'] .assistant-shell.pa-stage::after {
+  content: none;
+}
+
+/* Two surfaces change here, and only two.
+
+   `--pa-panel` at the dark theme's 4.5% white is a pane of glass over a plain
+   navy field — over a map it is a pane of glass over a road, and the labels
+   underneath fight the text on top. It becomes a smoked fill instead.
+
+   Note it is a FILL and not a `backdrop-filter`: panels sit inside motion
+   wrappers, and a transform ancestor silently kills backdrop-filter (see the
+   material rules at the top of this file). `.pa-frost`, which is only ever used
+   for chrome that is never transformed, keeps its blur and just gets denser.
+
+   Everything NESTED inside a panel is handled up in the dark token block
+   rather than here — see the surfaces note there. It used to be left alone on
+   the reasoning that the panel's own fill already backed it, and that was
+   wrong: the panel is two thirds transparent, so a third of the map still
+   arrived at the top of the stack and cards, rows and the panel behind them
+   all carried the same streets. */
+:root[data-pa-stage='map'] .assistant-shell {
+  --pa-panel: rgba(9, 15, 32, 0.66);
+  --pa-frost: rgba(9, 15, 32, 0.74);
+}
+
+/* ---------------------------------------------------------------
+   The brief header — top-left gutter
+
+   What the header folds into once it scrolls away. The mirror of the
+   globe on the right, and sized by the same arithmetic.
+   --------------------------------------------------------------- */
+
+/* The class is doubled for the same reason the heading rule is: this element
+   also carries `.pa-panel`, which sets `position: relative` at the same (0,2,0)
+   specificity and is declared further down the sheet. Tying and losing on
+   source order left the card in the flow, 700px above the fold, with nothing to
+   say why. */
+.assistant-shell .pa-brief.pa-brief {
+  position: fixed;
+  /* The container's own `lg:py-9`, so it starts level with where the header
+     panel started rather than floating above it. */
+  top: 2.25rem;
+  z-index: 2;
+  display: none;
+  /* The gutter, less a 1rem inset and 12px of air, capped at 28.8rem — 24rem
+     plus the 20%. The gutter term is the hard stop and stays: past it the card
+     would be sitting on top of the panels, which is the one thing it must not
+     do, so on a screen where the gutter binds, the extra 20% shows in the
+     contents rather than in the width. */
+  --pa-brief-w: min(calc(var(--pa-gutter) - 28px), 28.8rem);
+  width: var(--pa-brief-w);
+  /* Centred in the gutter, not pinned to the edge of the screen.
+
+     `left: 1rem` looks identical while the gutter term is the one that binds —
+     the width is then the gutter less 28px, so centring works out to 14px a
+     side and the card is within two pixels of centred by accident. It comes
+     apart at the cap: past roughly 2200px wide the card stops growing and the
+     gutter does not, so every further pixel of screen opened up as air on the
+     inboard side alone. At 3440 that was a 461px card sitting 16px from the
+     edge with 685px of stage on its other side. */
+  left: calc((var(--pa-gutter) - var(--pa-brief-w)) / 2);
+  padding: 1rem;
+}
+@media (min-width: 1440px) {
+  /* Doubled to match the base rule above — a single class here would sit at a
+     lower specificity than the `display: none` it is meant to undo. */
+  .assistant-shell .pa-brief.pa-brief {
+    display: block;
+  }
+}
+
+/* ---- the parts inside ---- */
+
+/* A hairline between bands, with its own rhythm above and below so the card
+   reads as stacked instruments rather than as one long list. */
+.assistant-shell .pa-brief-rule {
+  height: 1px;
+  margin: 0.85rem 0;
+  background: var(--pa-line-soft);
+}
+
+.assistant-shell .pa-brief-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--pa-faint);
+}
+
+/* A Big Three line. Full-width so the whole row is the hit target — at this
+   size a checkbox alone would be a 12px one. */
+.assistant-shell .pa-brief-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.65rem;
+  padding: 0.36rem 0.4rem;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--pa-navy);
+  transition: background-color 0.15s ease;
+}
+.assistant-shell .pa-brief-row:hover {
+  background: var(--pa-hover-wash);
+}
+
+/* The rank chip, which doubles as the tick: it carries the number until the
+   task is done and a check afterwards, so the row never grows a second box. */
+.assistant-shell .pa-brief-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  flex: none;
+  border-radius: 0.45rem;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--pa-ink-accent);
+  background: var(--pa-accent-bg);
+  box-shadow: inset 0 0 0 1px var(--pa-accent-ring);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.assistant-shell .pa-brief-tick[data-done='true'] {
+  background: var(--pa-grad);
+  color: #fff;
+  box-shadow: none;
+}
+.assistant-shell .pa-brief-tick[data-empty] {
+  color: var(--pa-faint);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--pa-line);
+}
+
+/* A habit, as a square you can hit. Unlogged is an outline, logged is filled —
+   the same read as the checkboxes on the Today view, at a third of the size. */
+.assistant-shell .pa-brief-habit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 0.6rem;
+  color: var(--pa-faint);
+  background: var(--pa-well);
+  box-shadow: inset 0 0 0 1px var(--pa-line);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.assistant-shell .pa-brief-habit:hover {
+  color: var(--pa-navy);
+  box-shadow: inset 0 0 0 1px var(--pa-accent-ring);
+}
+.assistant-shell .pa-brief-habit[data-done='true'] {
+  color: #fff;
+  background: var(--pa-grad);
+  box-shadow: none;
+}
+
+/* The compact clock is `text-[15px]` on its own root, and everything inside it
+   — the seconds, the meridiem — is sized in `em` off that. So one font-size
+   here scales the whole readout. It is set in CSS rather than passed as a
+   utility because two arbitrary `text-[…]` classes on one element are decided
+   by the order Tailwind happens to emit them in, not by the order they are
+   written. */
+.assistant-shell .pa-brief .pa-brief-clock {
+  font-size: 20px;
+}
+
+/* Undo and redo. Sized to the ring beside them rather than to the icon inside,
+   so the top row reads as three instruments and not as two plus some arrows. */
+.assistant-shell .pa-brief-ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.7rem;
+  color: var(--pa-faint);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.assistant-shell .pa-brief-ctrl:hover {
+  background: var(--pa-hover-wash);
+  color: var(--pa-navy);
+}
+
+/* The only warm thing on the card, and only when it has earned its place. */
+.assistant-shell .pa-brief-alert {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pa-amber);
+  background: var(--pa-amber-bg);
+  transition: filter 0.15s ease;
+}
+.assistant-shell .pa-brief-alert:hover {
+  filter: brightness(1.06);
+}
+
+/* ---------------------------------------------------------------
+   The city globe — top-right corner
+
+   Stage furniture, not a panel: it stands in the gutter beside the
+   column of panels rather than inside one.
+   --------------------------------------------------------------- */
+
+/* Hidden below 1440px, which is arithmetic rather than taste: at the widest the
+   orb ever gets — the gutter less a 1rem inset and 12px of air, times 0.9 — the
+   gutter stops being able to hold it at all somewhere just under 1440. Below
+   that the widget would sit on top of the panels, which is the one thing it is
+   not supposed to do, so it does not render. */
+.assistant-shell .pa-globe {
+  position: fixed;
+  /* 2.25rem is the container's own `lg:py-9`, so the orb's top edge lines up
+     with the top of the header panel rather than floating above it. */
+  top: 2.25rem;
+  z-index: 1;
+  display: none;
+  /* As wide as the gutter allows, less a tenth. The orb is square, so on a wide
+     but short screen it would otherwise grow taller than the viewport before it
+     ever reached the panel — 39.6vh (44vh, less the same tenth) caps it. */
+  --pa-globe-w: min(calc((var(--pa-gutter) - 28px) * 0.9), 39.6vh);
+  width: var(--pa-globe-w);
+  /* Centred in the gutter, same as the brief card — see the note there.
+
+     The globe was the worse of the two: `right: 1rem` with a width that is only
+     ever nine tenths of what fits means there is ALWAYS a remainder, and pinned
+     to one edge all of it fell on the inboard side. Not at one breakpoint, at
+     every width — 5px adrift at 1440, 17px at 1920, 68px at 2560, 280px at
+     3440, where the vh cap holds the orb at 570px inside a 1162px gutter. */
+  right: calc((var(--pa-gutter) - var(--pa-globe-w)) / 2);
+  user-select: none;
+}
+@media (min-width: 1440px) {
+  .assistant-shell .pa-globe {
+    display: block;
+  }
+}
+
+.assistant-shell .pa-globe-orb {
+  width: 100%;
+}
+
+/* ---- the city halos ----
+   cobe's marker is a hard-edged disc — measured at 3x it goes from background
+   to full brightness in a single pixel and back in one more — so the glow
+   cannot come from the canvas. It is this layer instead: one radial gradient
+   per city, pinned to the 1px tracker element cobe emits for that marker, and
+   breathing on a keyframe.
+
+   All of it is behind `@supports`, because CSS Anchor Positioning is Chromium
+   only for now. Without it these would stack up in the corner of the orb, so
+   they simply do not render, and the crisp dot inside the canvas is left to
+   carry the city on its own. */
+@supports (anchor-name: --pa-probe) {
+  .assistant-shell .pa-globe-halo {
+    position: absolute;
+    top: anchor(center);
+    left: anchor(center);
+    /* Sized against the widget, so the halo keeps its proportion to the orb at
+       every width the gutter gives it. */
+    width: 9%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    pointer-events: none;
+    /* `--cobe-visible-<id>` is set by cobe only while the marker faces the
+       camera; the inline fallback of 0 hides the halo the rest of the time. */
+    transition: opacity 0.5s ease;
+  }
+  .assistant-shell .pa-globe-halo > span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--pa-azure) 60%, transparent),
+      color-mix(in srgb, var(--pa-azure) 22%, transparent) 45%,
+      transparent 72%
+    );
+    animation: pa-globe-beat 2.8s ease-in-out infinite;
+  }
+}
+
+/* A swell, not a blink: the whole cycle is spent moving. */
+@keyframes pa-globe-beat {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.72);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-shell .pa-globe-halo > span {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* cobe ships a label per marker, positioned with CSS Anchor Positioning and
+   anchored to 1px tracker divs. Only Chromium implements the spec, so
+   everywhere else the labels stack up in the corner of the orb — and at 132px
+   there is no room for them anyway. The legend below carries the names, and the
+   times, in every browser.
+
+   `:not(:first-child)` is load-bearing: cobe wraps the canvas in a div of its
+   own, and that wrapper is the first child. Hiding every div here — which is
+   what this rule did at first — hides the canvas along with the labels, and the
+   orb renders as a 0x0 box with no error anywhere to explain it.
+
+   The labels themselves could be matched on `[style*='position-anchor']`, but
+   only in browsers that support the property: elsewhere the CSSOM drops the
+   declaration and the attribute never contains it — precisely the browsers this
+   rule exists for. Position is the one thing true everywhere. */
+.assistant-shell .pa-globe-orb > div:not(:first-child) {
+  display: none;
+}
+
+/* The host app paints every heading itself:
+
+     :is(.theme-v2, .theme-v2-tokens) :is(h1, h2, h3, h4) { color: var(--navy) }
+
+   which is (0,1,1) and so outranks the `text-[color:var(--pa-navy)]` utility
+   the portal's headings carry — in BOTH themes, which is why the greeting stayed
+   the light theme's navy on the dark stage. Inside the shell, headings follow
+   the portal's own ink.
+
+   The class is doubled to reach (0,2,1) rather than tying at (0,1,1) and hoping
+   this file is bundled after theme-v2.css. Every heading in the portal either
+   sets no colour or sets exactly this token, so nothing loses an override. */
+.assistant-shell.assistant-shell :is(h1, h2, h3, h4) {
+  color: var(--pa-navy);
+}
+
+/* No blue lettering on the dark stage. `--pa-ink-accent` covers the classes
+   that colour text through a token; the gradient-clipped number needs its own
+   ramp, because a gradient cannot be expressed as one colour. */
+:root[data-pa-theme='dark'] .assistant-shell {
+  --pa-grad-kpi: linear-gradient(135deg, #e9eefc 0%, #cdd6ea 55%, #aab6d0 100%);
+}
+
+/* Keep content above the floor glow. */
+.assistant-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Slim brand scrollbars. */
+.assistant-shell *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.assistant-shell *::-webkit-scrollbar-thumb {
+  background: var(--pa-faint);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.assistant-shell *::-webkit-scrollbar-thumb:hover {
+  background: var(--pa-muted);
+  background-clip: content-box;
+}
+
+/* Soft azure floor glow behind the content column. */
+.assistant-shell .pa-glow {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(78vmin, 880px);
+  height: min(78vmin, 880px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    closest-side,
+    rgba(0, 153, 255, 0.11),
+    rgba(0, 187, 255, 0.045) 52%,
+    transparent 74%
+  );
+  filter: blur(8px);
+}
+:root[data-pa-theme='dark'] .assistant-shell .pa-glow {
+  background: radial-gradient(
+    closest-side,
+    rgba(53, 171, 255, 0.16),
+    rgba(79, 208, 255, 0.06) 52%,
+    transparent 74%
+  );
+}
+
+/* ---------------------------------------------------------------
+   Surfaces
+   --------------------------------------------------------------- */
+
+/* Primary content panel. Light fill, no blur — the stage reads straight
+   through and it stays immune to the transform-ancestor gotcha. */
+.assistant-shell .pa-panel {
+  position: relative;
+  border-radius: 1.6rem;
+  background: var(--pa-panel);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-shadow-lg);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Chrome variant: genuinely frosted. Only for sticky/floating chrome that
+   never sits inside a transformed wrapper. */
+.assistant-shell .pa-frost {
+  border-radius: 1.5rem;
+  background: var(--pa-frost);
+  border: 1px solid var(--pa-edge-soft);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--pa-shadow);
+}
+
+/* Interactive card that lifts on hover. Safe to wrap in motion. */
+.assistant-shell .pa-card {
+  position: relative;
+  border-radius: 1.35rem;
+  background: var(--pa-card);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-shadow);
+  transition:
+    transform 0.2s var(--pa-ease),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.assistant-shell .pa-card:hover {
+  transform: translateY(-3px);
+  background: var(--pa-card-hover);
+  border-color: var(--pa-accent-ring);
+  box-shadow: var(--pa-shadow-xl);
+}
+.assistant-shell .pa-card:focus-within {
+  border-color: var(--pa-accent-border);
+  box-shadow: var(--pa-highlight), 0 0 0 3px var(--pa-accent-glow);
+}
+/* Opt out of the lift where a card is purely presentational. */
+.assistant-shell .pa-card-flat:hover {
+  transform: none;
+}
+
+/* Raised inner surface inside a panel. */
+.assistant-shell .pa-tile {
+  border-radius: 1.15rem;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-shadow-sm);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* List row. */
+.assistant-shell .pa-row {
+  border-radius: 1rem;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-edge);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.assistant-shell .pa-row-hover:hover {
+  background: var(--pa-row-hover);
+  border-color: var(--pa-accent-ring);
+  box-shadow: 0 6px 18px -14px rgba(0, 0, 0, 0.5);
+}
+/* A completed row recedes. */
+.assistant-shell .pa-row[data-done='true'] {
+  background: var(--pa-well);
+  border-color: var(--pa-line-soft);
+}
+
+/* Sunken well — used for backlog rails and empty drop targets. */
+.assistant-shell .pa-well {
+  border-radius: 1.15rem;
+  background: var(--pa-well);
+  border: 1px solid var(--pa-line-soft);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Dashed drop zone. */
+.assistant-shell .pa-drop {
+  border-radius: 1.15rem;
+  border: 1.5px dashed var(--pa-line);
+  background: var(--pa-well);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.assistant-shell .pa-drop[data-over='true'] {
+  border-color: var(--pa-accent-border);
+  background: var(--pa-accent-bg);
+}
+
+/* Near-opaque panel for dialog bodies, which need to read over a blurred
+   page rather than over the stage. */
+.assistant-shell .pa-sheet {
+  border-radius: 1.5rem;
+  background: var(--pa-solid);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-shadow-xl);
+}
+
+/* ---------------------------------------------------------------
+   Typography
+   --------------------------------------------------------------- */
+.assistant-shell .pa-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pa-ink-accent);
+}
+
+.assistant-shell .pa-title {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--pa-navy);
+}
+
+/* Gradient-clipped KPI number. Lettering, so it goes neutral in dark — see the
+   override under the dark tokens. */
+.assistant-shell .pa-stat {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  background-image: var(--pa-grad-kpi);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Display numeral for the day hero and the clock. */
+.assistant-shell .pa-display {
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  color: var(--pa-navy);
+}
+
+.assistant-shell .pa-divider {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--pa-line), transparent);
+}
+
+/* ---------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------- */
+
+/* Secondary CTA — frosted pill with azure text. (The PRIMARY action on a
+   surface is the shared GlassButton "haze light", not a class here.) */
+.assistant-shell .pa-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--pa-hover-wash);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--pa-accent-border);
+  color: var(--pa-ink-accent);
+  box-shadow: var(--pa-highlight), 0 8px 22px -10px rgba(0, 0, 0, 0.28);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s var(--pa-ease),
+    box-shadow 0.18s ease;
+}
+.assistant-shell .pa-cta:hover {
+  background: var(--pa-row-hover);
+  border-color: var(--pa-accent-border);
+  transform: translateY(-1px);
+}
+.assistant-shell .pa-cta:active {
+  transform: translateY(0);
+}
+
+/* Quiet button — text + hover wash. */
+.assistant-shell .pa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--pa-muted);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.assistant-shell .pa-btn:hover {
+  background: var(--pa-hover-wash);
+  color: var(--pa-navy);
+}
+
+/* Square icon button. */
+.assistant-shell .pa-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  color: var(--pa-faint);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.assistant-shell .pa-icon-btn:hover {
+  background: var(--pa-hover-wash);
+  color: var(--pa-navy);
+}
+.assistant-shell .pa-icon-btn[data-danger='true']:hover {
+  background: var(--pa-red-bg);
+  color: var(--pa-red);
+}
+
+/* Inputs. */
+.assistant-shell .pa-input,
+.assistant-shell input.pa-input,
+.assistant-shell textarea.pa-input {
+  width: 100%;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-line);
+  color: var(--pa-navy);
+  border-radius: 0.85rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+.assistant-shell .pa-input::placeholder {
+  color: var(--pa-faint);
+}
+.assistant-shell .pa-input:hover {
+  border-color: var(--pa-accent-ring);
+}
+.assistant-shell .pa-input:focus,
+.assistant-shell .pa-input:focus-visible {
+  outline: none;
+  border-color: var(--pa-accent-border);
+  background: var(--pa-row-hover);
+  box-shadow: 0 0 0 3px var(--pa-accent-glow);
+}
+
+/* The hero capture bar — a taller, rounder input with an azure halo. */
+.assistant-shell .pa-capture {
+  border-radius: 999px;
+  background: var(--pa-panel);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-highlight), 0 10px 28px -20px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.assistant-shell .pa-capture:focus-within {
+  background: var(--pa-row-hover);
+  border-color: var(--pa-accent-border);
+  box-shadow: var(--pa-highlight), 0 0 0 4px var(--pa-accent-glow);
+}
+
+/* ---- the number parked at the end of a capture bar ----
+   A four-character field with no edge on it, sitting next to a name field
+   that runs the width of the bar: it read as part of the sentence rather
+   than as a second thing to fill in, and people submitted the line with the
+   calories still empty.
+
+   A hairline ring rather than `.pa-ghost-slot`'s `--pa-well` fill. The bar is
+   already a translucent pill; a well inside it is a hole punched in a surface
+   that is itself mostly hole, and on the map stage the two transparencies
+   stack into a smudge. The ring gives the same "type here" reading and leaves
+   the pill intact. Hover and focus then follow the slot exactly, because by
+   then it IS the same control and should not have to be learned twice. */
+.assistant-shell .pa-capture-slot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--pa-line);
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.assistant-shell .pa-capture-slot:hover {
+  box-shadow: inset 0 0 0 1px var(--pa-accent-ring);
+}
+.assistant-shell .pa-capture-slot:focus-within {
+  background: var(--pa-accent-bg);
+  box-shadow: inset 0 0 0 1px var(--pa-accent-border);
+}
+
+/* Segmented control with a motion layoutId pill riding behind the labels. */
+.assistant-shell .pa-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  border-radius: 999px;
+  padding: 0.25rem;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-highlight);
+}
+.assistant-shell .pa-seg-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--pa-muted);
+  transition: color 0.18s ease;
+}
+.assistant-shell .pa-seg-btn:hover {
+  color: var(--pa-navy);
+}
+.assistant-shell .pa-seg-btn[data-active='true'] {
+  color: var(--pa-navy);
+}
+/* The sliding pill itself (rendered as a motion.span behind the label). */
+.assistant-shell .pa-seg-pill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--pa-accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 16px -10px rgba(15, 57, 139, 0.55);
+}
+:root[data-pa-theme='dark'] .assistant-shell .pa-seg-pill {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 16px -10px rgba(0, 0, 0, 0.9);
+}
+
+/* ---------------------------------------------------------------
+   Chips, badges, avatars
+   --------------------------------------------------------------- */
+
+/* Azure-tinted icon chip. */
+.assistant-shell .pa-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  background: var(--pa-accent-bg);
+  color: var(--pa-azure);
+  box-shadow: inset 0 0 0 1px var(--pa-accent-ring), var(--pa-highlight);
+}
+
+/* Solid gradient icon chip. */
+.assistant-shell .pa-chip-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  background: var(--pa-grad);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(15, 57, 139, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Small text pill. Tint via data-tone. */
+.assistant-shell .pa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.14rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: var(--pa-well);
+  color: var(--pa-muted);
+}
+.assistant-shell .pa-badge[data-tone='azure'] {
+  background: var(--pa-accent-bg);
+  color: var(--pa-ink-accent);
+}
+.assistant-shell .pa-badge[data-tone='green'] {
+  background: var(--pa-green-bg);
+  color: var(--pa-green);
+}
+.assistant-shell .pa-badge[data-tone='amber'] {
+  background: var(--pa-amber-bg);
+  color: var(--pa-amber);
+}
+.assistant-shell .pa-badge[data-tone='red'] {
+  background: var(--pa-red-bg);
+  color: var(--pa-red);
+}
+
+/* Goal breadcrumb chip on a task row — the "why" made visible. */
+.assistant-shell .pa-trace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem 0.1rem 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--pa-muted);
+  background: var(--pa-well);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.assistant-shell .pa-trace:hover {
+  background: var(--pa-accent-bg);
+  color: var(--pa-azure);
+}
+
+/* Gradient monogram. */
+.assistant-shell .pa-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--pa-grad);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 10px 24px -12px rgba(15, 57, 139, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+/* Streak flame chip. */
+.assistant-shell .pa-flame {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--pa-flame-bg);
+  color: var(--pa-flame-ink);
+}
+.assistant-shell .pa-flame[data-cold='true'] {
+  background: var(--pa-well);
+  color: var(--pa-faint);
+}
+
+/* ---------------------------------------------------------------
+   Checkbox
+   --------------------------------------------------------------- */
+.assistant-shell .pa-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid var(--pa-faint);
+  background: var(--pa-tile);
+  color: transparent;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s var(--pa-ease);
+}
+.assistant-shell .pa-check:hover {
+  border-color: var(--pa-accent-border);
+  transform: scale(1.06);
+}
+.assistant-shell .pa-check[data-checked='true'] {
+  background: var(--pa-grad);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 14px -8px rgba(15, 57, 139, 0.7);
+}
+.assistant-shell .pa-check[data-big3='true']:not([data-checked='true']) {
+  border-color: var(--pa-accent-border);
+  box-shadow: 0 0 0 3px var(--pa-accent-glow);
+}
+.assistant-shell .pa-check:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pa-accent-ring);
+}
+
+/* ---------------------------------------------------------------
+   Meters, rings, heatmap
+   --------------------------------------------------------------- */
+.assistant-shell .pa-meter {
+  position: relative;
+  height: 0.4rem;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--pa-sunken);
+}
+.assistant-shell .pa-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pa-grad-meter);
+  box-shadow: 0 0 12px -2px var(--pa-accent-border);
+  transition: width 0.55s var(--pa-ease);
+}
+.assistant-shell .pa-meter-fill[data-complete='true'] {
+  background: linear-gradient(90deg, var(--pa-green), var(--pa-green));
+  box-shadow: 0 0 12px -2px var(--pa-green-bg);
+}
+.assistant-shell .pa-meter-thin {
+  height: 0.28rem;
+}
+
+/* SVG progress ring stroke colours (the geometry lives in the component). */
+.assistant-shell .pa-ring-track {
+  stroke: var(--pa-sunken);
+}
+.assistant-shell .pa-ring-fill {
+  stroke: url(#pa-ring-gradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.7s var(--pa-ease);
+  filter: drop-shadow(0 2px 6px var(--pa-accent-glow));
+}
+
+/* Habit heatmap. */
+.assistant-shell .pa-heat-cell {
+  border-radius: 3px;
+  background: var(--pa-heat-0);
+  transition: transform 0.15s var(--pa-ease), background-color 0.15s ease;
+}
+.assistant-shell .pa-heat-cell:hover {
+  transform: scale(1.35);
+}
+.assistant-shell .pa-heat-cell[data-level='1'] {
+  background: var(--pa-heat-1);
+}
+.assistant-shell .pa-heat-cell[data-level='2'] {
+  background: var(--pa-heat-2);
+}
+.assistant-shell .pa-heat-cell[data-level='3'] {
+  background: var(--pa-heat-3);
+}
+.assistant-shell .pa-heat-cell[data-level='4'] {
+  background: var(--pa-heat-4);
+}
+.assistant-shell .pa-heat-cell[data-today='true'] {
+  box-shadow: 0 0 0 1.5px var(--pa-azure);
+}
+
+/* A day that has not happened yet: the geometry, drawn as an outline rather
+   than a fill, so the boundary between filled and hollow is always today and
+   the rest of the month still reads as room left. The hairline is deliberately
+   at the softer of the two line tokens — on the month grid these cells are
+   21px, and at that size a `--pa-line` outline turns a young month into a
+   sheet of graph paper. It is not a value on the ramp, so it does not answer
+   to hover either. */
+.assistant-shell .pa-heat-cell[data-future='true'] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--pa-line-soft);
+}
+.assistant-shell .pa-heat-cell[data-future='true']:hover {
+  transform: none;
+}
+/* Today wins: it is a future-less cell by definition, but the ring must also
+   survive the outline rule above when the two ever meet. */
+.assistant-shell .pa-heat-cell[data-today='true'][data-future='true'] {
+  box-shadow: 0 0 0 1.5px var(--pa-azure);
+}
+
+/* The date, carried inside the cell for the day in progress and no other. The
+   ink has to survive the whole ramp, and the ramp inverts between themes —
+   level 4 is near-black navy on white and near-white azure on the dark stage —
+   so it cannot be one colour. `--pa-navy` (primary ink, which flips with the
+   theme) holds down to level 3; at level 4 the cell has become the ink colour
+   itself, so the number switches to `--pa-solid`, the panel fill, which is the
+   one token guaranteed to be its opposite in both themes. */
+.assistant-shell .pa-heat-day {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--pa-navy);
+}
+.assistant-shell .pa-heat-cell[data-level='4'] .pa-heat-day {
+  color: var(--pa-solid);
+}
+
+/* ---------------------------------------------------------------
+   Live clock
+   --------------------------------------------------------------- */
+
+/* Each digit sits in a fixed-width cell so the clock never reflows as
+   numerals change width — the roll animation would otherwise nudge the
+   whole row sideways every second. */
+.assistant-shell .pa-clock {
+  display: inline-flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.03em;
+}
+.assistant-shell .pa-clock-digit {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  text-align: center;
+}
+.assistant-shell .pa-clock-sep {
+  opacity: 0.35;
+  animation: pa-clock-pulse 2s ease-in-out infinite;
+}
+@keyframes pa-clock-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.16;
+  }
+}
+/* The sweeping seconds arc behind the clock. */
+.assistant-shell .pa-clock-arc {
+  stroke: url(#pa-clock-gradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s var(--pa-ease);
+}
+.assistant-shell .pa-clock-arc-track {
+  stroke: var(--pa-sunken);
+}
+
+/* ---------------------------------------------------------------
+   Inline editing — writing straight onto the page
+
+   A field that reads as text until you touch it. Used for exercise
+   names, food names, the calorie figures and the daily target.
+
+   The trick is that these are ALWAYS inputs (see inline-field.tsx);
+   all that changes on focus is that the box appears. That keeps the
+   caret landing exactly where it was aimed on the first click.
+   --------------------------------------------------------------- */
+.assistant-shell .pa-ghost {
+  width: 100%;
+  min-width: 0;
+  padding: 0.2rem 0.4rem;
+  margin: -0.2rem -0.4rem; /* so the padding does not shift the text off-grid */
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+.assistant-shell .pa-ghost::placeholder {
+  color: var(--pa-faint);
+}
+/* Hover shows there is something to click; focus commits to the field. */
+.assistant-shell .pa-ghost:hover {
+  background: var(--pa-hover-wash);
+}
+.assistant-shell .pa-ghost:focus,
+.assistant-shell .pa-ghost:focus-visible {
+  outline: none;
+  background: var(--pa-accent-bg);
+  border-color: var(--pa-accent-border);
+}
+
+/* A number and its unit, sized to the number rather than to a guess. */
+.assistant-shell .pa-ghost-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2em;
+  min-width: 0;
+}
+/* `content-box` is load-bearing. The width comes in as an inline `ch` value
+   measured from the digits themselves, and under the global `border-box` the
+   0.4rem of padding either side is subtracted from it — a three-digit field
+   ended up about one digit wide and "380" rendered as "3". Sizing the CONTENT
+   box means the number gets exactly the room it asked for, and the negative
+   margin still pulls the padding back out of the layout. */
+.assistant-shell .pa-ghost-num .pa-ghost {
+  box-sizing: content-box;
+  width: auto; /* an inline `ch` width does the sizing here */
+  text-align: inherit;
+}
+/* Fixed, not relative. As an `em` this shrank to 6px beside a 13px row while
+   looking right beside a 26px figure — the unit has to stay readable at both,
+   and it is the same word either way. */
+.assistant-shell .pa-ghost-suffix {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--pa-faint);
+  -webkit-text-fill-color: var(--pa-faint); /* survives .pa-stat's clipped fill */
+}
+
+/* ---- a figure that has to be FOUND ----
+   The plain ghost field is sized to its own digits, which is right for a
+   number sitting in a sentence and wrong for one in a list: a three-digit
+   calorie count came out about 26px wide with no edge on it, so the one thing
+   on the row you most often want to change was the hardest thing to hit.
+
+   This gives it a resting box and a floor on its width. It is still the same
+   click-to-edit field — it just looks like somewhere you can type. */
+.assistant-shell .pa-ghost-slot {
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.7rem;
+  background: var(--pa-well);
+  box-shadow: inset 0 0 0 1px var(--pa-line-soft);
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.assistant-shell .pa-ghost-slot:hover {
+  box-shadow: inset 0 0 0 1px var(--pa-accent-ring);
+}
+.assistant-shell .pa-ghost-slot:focus-within {
+  background: var(--pa-accent-bg);
+  box-shadow: inset 0 0 0 1px var(--pa-accent-border);
+}
+/* The inner field drops its own hover/focus dressing — the slot carries it
+   now, and two boxes inside one another read as a mistake. */
+.assistant-shell .pa-ghost-slot .pa-ghost {
+  min-width: 3.5ch;
+  margin: 0;
+  padding: 0;
+  text-align: right;
+}
+.assistant-shell .pa-ghost-slot .pa-ghost:hover,
+.assistant-shell .pa-ghost-slot .pa-ghost:focus,
+.assistant-shell .pa-ghost-slot .pa-ghost:focus-visible {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* ---------------------------------------------------------------
+   The counter — minus, number, plus
+
+   One control, three hit targets. The middle is a real input, so the
+   whole thing has to read as a single object rather than as a field
+   with two buttons parked beside it: hence the shared shell, the
+   hairline, and the lift on hover.
+   --------------------------------------------------------------- */
+.assistant-shell .pa-step {
+  display: inline-flex;
+  align-items: stretch;
+  height: 2rem;
+  border-radius: 0.7rem;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-line);
+  box-shadow: var(--pa-highlight);
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+.assistant-shell .pa-step:hover {
+  border-color: var(--pa-accent-ring);
+}
+.assistant-shell .pa-step:focus-within {
+  border-color: var(--pa-accent-border);
+  background: var(--pa-accent-bg);
+}
+.assistant-shell .pa-step-sm {
+  height: 1.75rem;
+  border-radius: 0.6rem;
+}
+
+.assistant-shell .pa-step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  flex: none;
+  border-radius: inherit;
+  color: var(--pa-faint);
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.assistant-shell .pa-step-sm .pa-step-btn {
+  width: 1.45rem;
+}
+.assistant-shell .pa-step-btn:hover:not(:disabled) {
+  background: var(--pa-hover-wash);
+  color: var(--pa-navy);
+}
+/* Held rather than hidden: a stepper that loses a button at its floor
+   changes width, and the row it sits in reflows as you count down. */
+.assistant-shell .pa-step-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* `center`, not `baseline`.
+   The field is stretched to the full height of the control, and baseline
+   alignment inside a stretched box places the content by its baseline rather
+   than in the middle of it — the number ended up 4px above centre on sets and
+   reps and 5.25px on the load, while the minus and plus beside it were exact.
+   Centring is also the better fit for the unit: "kg" carries a descender, so
+   sharing a baseline with the number hung the g below it. */
+.assistant-shell .pa-step-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0 0.1rem;
+  cursor: text;
+}
+/* ---- centring the digits ----
+   `line-height: 1` on both, so the box hugs the text and centring it lands
+   close to centring the ink. Measured at 4x: 0.5px high on sets, 0.125px low
+   on the load — sub-pixel on any real display, and against the 4-5px the
+   default baseline alignment gave.
+
+   ── Why the input is NOT cap-trimmed, and the unit is ──────────────────────
+   `text-box: trim-both cap alphabetic` gets that residual to zero, and it was
+   used here until it turned out to CROP the digits. An input clips its text at
+   its own box, and the trim puts the bottom of that box on the baseline — so
+   the overshoot under a round 0, 3 or 8 is cut off, and the top of a lining
+   figure with it. Measured: glyph ink 32 rows tall trimmed against 35
+   untrimmed at 4x. Neither `overflow: visible`, extra padding nor
+   `content-box` gets the paint back; the clip is the input's, not the box's.
+
+   A span has no such clip, so the unit keeps the trim — which is also what
+   holds "kg" level with the digits rather than hanging its descender low. */
+.assistant-shell .pa-step-input,
+.assistant-shell .pa-step-suffix {
+  line-height: 1;
+}
+.assistant-shell .pa-step-suffix {
+  text-box: trim-both cap alphabetic;
+}
+
+.assistant-shell .pa-step-input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--pa-navy);
+}
+.assistant-shell .pa-step-sm .pa-step-input {
+  font-size: 12px;
+}
+.assistant-shell .pa-step-suffix {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--pa-faint);
+}
+
+/* ---------------------------------------------------------------
+   Week board
+   --------------------------------------------------------------- */
+.assistant-shell .pa-day-col {
+  border-radius: 1.25rem;
+  background: var(--pa-tile);
+  border: 1px solid var(--pa-edge);
+  box-shadow: var(--pa-shadow-sm);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.assistant-shell .pa-day-col[data-today='true'] {
+  background: var(--pa-card-hover);
+  border-color: var(--pa-accent-ring);
+  box-shadow: var(--pa-shadow);
+}
+.assistant-shell .pa-day-col[data-over='true'] {
+  background: var(--pa-accent-bg);
+  border-color: var(--pa-accent-border);
+}
+.assistant-shell .pa-day-col[data-past='true'] {
+  opacity: 0.72;
+}
+
+/* The card being dragged. */
+.assistant-shell .pa-dragging {
+  cursor: grabbing;
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------------------------------------------------------------
+   Day strip — seven days as one control
+
+   The food view's week: a day, its total, and the fact that it is the
+   one being edited. Doubles as the day switcher, so the week is never
+   a separate thing to look at.
+   --------------------------------------------------------------- */
+.assistant-shell .pa-daybtn {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.25rem 0.55rem;
+  border-radius: 0.85rem;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+.assistant-shell .pa-daybtn:hover {
+  background: var(--pa-hover-wash);
+}
+/* Today gets a hairline; the SELECTED day gets the fill. They are different
+   facts and land on the same button often enough that they cannot share a
+   treatment — otherwise "which day am I editing" is unanswerable on any day
+   that is not today. */
+.assistant-shell .pa-daybtn[data-today='true'] {
+  border-color: var(--pa-accent-ring);
+}
+.assistant-shell .pa-daybtn[data-selected='true'] {
+  background: var(--pa-accent-bg);
+  border-color: var(--pa-accent-border);
+}
+.assistant-shell .pa-daybtn[data-future='true'] {
+  opacity: 0.5;
+}
+
+/* The little column of intake under each day. Height is set inline from the
+   day's share of the target; this only draws the track it grows in. */
+.assistant-shell .pa-daybar {
+  position: relative;
+  width: 100%;
+  max-width: 1.15rem;
+  height: 2.6rem;
+  border-radius: 0.35rem;
+  background: var(--pa-sunken);
+  overflow: hidden;
+}
+.assistant-shell .pa-daybar-fill {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: var(--pa-grad-meter);
+  transition: height 0.45s var(--pa-ease);
+}
+/* Over target: the bar is full and says so in the status colour rather than
+   silently clipping at 100%. */
+.assistant-shell .pa-daybar-fill[data-over='true'] {
+  background: linear-gradient(180deg, var(--pa-amber), color-mix(in srgb, var(--pa-amber) 70%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-shell .pa-daybar-fill {
+    transition: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Decorative
+   --------------------------------------------------------------- */
+
+/* Slow sheen sweep across a hero panel. */
+.assistant-shell .pa-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.5) 45%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  animation: pa-sheen 7s ease-in-out infinite;
+  opacity: 0.5;
+}
+:root[data-pa-theme='dark'] .assistant-shell .pa-sheen::after {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.07) 45%,
+    transparent 60%
+  );
+}
+@keyframes pa-sheen {
+  0%,
+  55% {
+    background-position: 160% 0;
+  }
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+/* Focus ring helper for bare buttons.
+
+   The radius INHERITS rather than being pinned: this helper is used on tiles
+   (1.15rem), rows (1rem) and pills (999px) alike, and a fixed 0.7rem squared
+   off the corners of everything rounder than that the moment it took focus —
+   which is exactly what you saw after clicking a habit tile. */
+.assistant-shell .pa-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pa-accent-ring);
+  border-radius: inherit;
+}
+
+
+/* Entrance used where CSS is simpler than motion. */
+.assistant-shell .pa-rise {
+  animation: pa-rise 0.45s var(--pa-ease) both;
+}
+@keyframes pa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Horizontal scroller that hides its bar (view nav on mobile). */
+.assistant-shell .pa-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.assistant-shell .pa-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* Strike-through treatment for finished work. */
+.assistant-shell .pa-struck {
+  text-decoration: line-through;
+  text-decoration-color: var(--pa-faint);
+  text-decoration-thickness: 1.5px;
+  color: var(--pa-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-shell *,
+  .assistant-shell *::after,
+  .assistant-shell *::before {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .assistant-shell .pa-card:hover {
+    transform: none;
+  }
+}
+
+/* =================================================================
+   Portal reset — NOT scoped under .assistant-shell
+
+   Radix renders dialogs, popovers and command menus into a portal at the
+   end of <body>, where theme-app.css frosts every `[data-slot=…-content]`
+   with its own fill, 1px border, shadow, backdrop blur and `rounded-lg`.
+
+   Our portals put a fully styled `.assistant-shell` surface INSIDE that
+   container, so the host's frosting showed up as a second, less-rounded
+   rectangle sitting proud of our 1.5rem panel — a visible doubled corner
+   on every dialog. It also cannot follow the assistant's dark theme.
+
+   Marking the portal container `.pa-portal` strips it back to a bare
+   positioning box and lets the inner surface own every pixel. `!important`
+   is load-bearing: the host rules are plain attribute selectors that land
+   later in the cascade than any utility class we could add.
+   ================================================================= */
+/* -----------------------------------------------------------------
+   The shared "Haze light" GlassButton, on the dark stage.
+
+   Its whole effect is a 60%-opaque pale azure sheet with navy text,
+   backdrop-blurred over a LIGHT page. Put it on a near-black stage and the
+   fill resolves to a muddy slate with #0f398b text that all but disappears.
+   In dark mode it becomes a near-solid bright pill with dark ink — the same
+   control, still the brightest thing on the surface, but legible.
+
+   Specificity beats theme-v2's `.theme-v2 .glass-button--haze-light
+   .glass-button` (0,3,0) rather than relying on file order.
+   ----------------------------------------------------------------- */
+:root[data-pa-theme='dark'] .assistant-shell .glass-button--haze-light .glass-button {
+  background: rgba(150, 210, 255, 0.94);
+  color: #0a1e3c;
+  text-shadow: none;
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.7),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.24),
+    0 0 0.6em -0.05em rgba(120, 190, 255, 0.5),
+    0 0.1em 0.8em 0 rgba(80, 165, 255, 0.42),
+    0 0 1.5em 0 rgba(60, 150, 255, 0.3);
+}
+:root[data-pa-theme='dark'] .assistant-shell .glass-button--haze-light .glass-button:hover {
+  background: rgba(168, 220, 255, 0.98);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.8),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.24),
+    0 0 0.9em -0.05em rgba(140, 205, 255, 0.7),
+    0 0.1em 1.05em 0 rgba(90, 175, 255, 0.6),
+    0 0 2em 0 rgba(70, 160, 255, 0.45);
+}
+
+.pa-portal[data-slot='dialog-content'],
+.pa-portal[data-slot='popover-content'],
+.pa-portal[data-slot='command-dialog'],
+.pa-portal[data-slot='alert-dialog-content'] {
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+/* =================================================================
+   TOUCH
+
+   Everything the portal needs to be good on a phone that belongs to
+   the KIT rather than to a view. Roughly forty per-site fixes reduce
+   to what is below, and a per-site fix is the wrong shape anyway:
+   every one of them reflows a row that is already tight, and the next
+   button somebody adds would miss it.
+
+   Two guards, used consistently, and the difference matters:
+
+     @media (pointer: coarse)
+       HIT AREAS ONLY. Nothing here moves a pixel of layout, so it is
+       safe to want on an iPad and on a touchscreen laptop.
+
+     @media (pointer: coarse) and (max-width: 767px)
+       Type size, the iOS zoom fix, and anything that REFLOWS. The
+       width clause is what stops a 1440px touchscreen laptop getting
+       phone-sized controls.
+   ================================================================= */
+
+/* ---- iOS Safari zooms the page on any field under 16px ----
+   It zooms in on focus and never zooms back out, so one tap on a search
+   box leaves the whole portal magnified and panned. Scoped to the
+   ELEMENT and not to `.pa-input`, because the offenders split about
+   evenly between kit-classed and bare fields, and `.pa-input` declares
+   no font-size of its own — every call site invents one and every one
+   of them was under 16. Dialogs wrap their own `.assistant-shell`
+   inside the portal, so portalled fields are covered too. */
+@media (pointer: coarse) and (max-width: 767px) {
+  .assistant-shell input,
+  .assistant-shell textarea {
+    font-size: 16px;
+  }
+}
+
+/* ---- hit areas that cost no layout ----
+   A centred 44×44 pseudo-element, which is exactly 44 whatever the
+   painted box is. The obvious alternative — `inset: -12px` — is 44 only
+   on the 20px base: the 16.8px checkbox variants land at 41 and the
+   24px one at 48.
+
+   `::after` and not `::before`: several of these buttons already use
+   `::before` for a ring or a wash. */
+@media (pointer: coarse) {
+  .assistant-shell .pa-check::after,
+  .assistant-shell .pa-icon-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
+/* `.pa-check` is already relative; `.pa-icon-btn` was not, and an
+   absolutely-positioned pad needs something to be positioned against. */
+.assistant-shell .pa-icon-btn {
+  position: relative;
+}
+
+/* ---- hit areas that have to reflow ----
+   A stepper button is a layout box, not a hit pad — an invisible
+   overlay would sit on top of the number between them. The small
+   variant only appears in the meal-library ingredient row, which is
+   the tightest horizontal budget in the portal, so it gets 2.5rem
+   rather than 2.75 and buys 20px back. */
+@media (pointer: coarse) and (max-width: 767px) {
+  /* 2.875rem, not 2.75: `height` is border-box, so a 44px shell leaves the
+     buttons inside it 42px once the 1px hairline either side is taken. Both
+     variants get the same treatment — the small one exists to save width in
+     the meal-library row, and on a phone that row wraps its controls onto
+     their own line anyway, so there is no width left to save. */
+  .assistant-shell .pa-step,
+  .assistant-shell .pa-step-sm {
+    height: 2.875rem;
+    border-radius: 0.85rem;
+  }
+  .assistant-shell .pa-step-btn,
+  .assistant-shell .pa-step-sm .pa-step-btn {
+    width: 2.75rem;
+  }
+
+  /* `.pa-btn` is used at `h-7` for the plan-picker chips, which the training
+     view's own docblock calls the only way a day gets filled. */
+  .assistant-shell .pa-btn {
+    min-height: 44px;
+  }
+
+  /* Below `sm` the nav tabs are icon-only, so the label no longer supplies the
+     width and they collapse to 36px. */
+  .assistant-shell .pa-seg-btn {
+    min-width: 44px;
+  }
+
+  /* `min-height`, not padding: `.assistant-shell .pa-seg-btn` is (0,2,0)
+     and a `py-*` utility loses to its padding shorthand, but min-height
+     is undeclared so it applies cleanly. Adding padding as well would
+     double-count and push the nine-tab strip to 54px. */
+  .assistant-shell .pa-seg-btn {
+    min-height: 44px;
+  }
+
+  /* The kit's own comment on `.pa-ghost-slot` says this is the figure
+     that "has to be FOUND". At 26px tall it was findable and not
+     tappable. */
+  .assistant-shell .pa-ghost-slot,
+  .assistant-shell .pa-capture-slot {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-block: 0.55rem;
+  }
+  .assistant-shell .pa-ghost-slot .pa-ghost {
+    min-width: 4.5ch;
+  }
+
+  /* `width={2}` on a sets/reps counter is ~14px of box, and the stepper's own
+     docblock says the middle is a real input because typing is how you get
+     from 20 to 100. A floor so one digit still has something to hit. */
+  .assistant-shell .pa-step-input {
+    min-width: 2.5ch;
+  }
+
+  /* ---- type that carries information ----
+     Sub-12px is fine on a 27-inch panel at arm's length and is not fine at
+     360px in one hand. Only the kit classes that carry FACTS are lifted; the
+     eyebrow stays where it is, because it is a label and reads as one. */
+  .assistant-shell .pa-badge,
+  .assistant-shell .pa-trace {
+    font-size: 0.75rem;
+    max-width: 100%;
+  }
+  .assistant-shell .pa-flame {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+  }
+  .assistant-shell .pa-ghost-suffix,
+  .assistant-shell .pa-step-suffix {
+    font-size: 12px;
+  }
+
+  /* `.pa-cta` is the affirmative action on a surface — "Add", "Today",
+     "Capture" — and every call site sizes it h-8 or h-9. `min-height` so a
+     taller call site keeps its own height. */
+  .assistant-shell .pa-cta {
+    min-height: 44px;
+  }
+
+  /* The host kit's GlassButton is the primary action on most surfaces here —
+     "Add", "Continue", "Save the day". It renders a wrapper around a real
+     button and its size presets are `!important`, so the height has to come
+     from both. Scoped under `.assistant-shell`, so nothing outside the portal
+     moves. */
+  .assistant-shell .glass-button,
+  .assistant-shell .glass-button > button {
+    min-height: 44px;
+  }
+
+  /* `.pa-btn` is invisible until hovered, and a phone never hovers —
+     the plan-picker chips, which are the only way a training day gets
+     filled, were a row of bare words. */
+  .assistant-shell .pa-btn {
+    background: var(--pa-well);
+    box-shadow: inset 0 0 0 1px var(--pa-line);
+  }
+}
+
+/* ---- horizontal rails ----
+   `overscroll-behavior-x` is the load-bearing half: without it, a swipe
+   that reaches either end of the nine-tab strip is handed to Safari's
+   back gesture and navigates out of the portal entirely.
+
+   The edge fade is opt-in through `data-fade`, not blanket — a rail
+   whose content fits would otherwise fade a right edge that is not
+   cut. */
+.assistant-shell .pa-scroll-x {
+  overscroll-behavior-x: contain;
+}
+@media (max-width: 639px) {
+  /* Both edges. A one-sided fade is right only while the rail is scrolled to
+     the opposite end, and the habit heatmap deliberately opens scrolled hard
+     right — so the cut it needed to show was the one on the LEFT. Fading both
+     costs 24px of the first and last cell and is correct at every position; a
+     scroll-position-aware mask would need a listener per rail to say the same
+     thing. */
+  .assistant-shell .pa-scroll-x[data-fade='true'] {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 24px,
+      #000 calc(100% - 24px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 24px,
+      #000 calc(100% - 24px),
+      transparent
+    );
+  }
+}
+
+/* ---- the notch and the home indicator ----
+   The root layout ships `viewport-fit=cover`, so these resolve to real
+   values on a notched iPhone and to exactly 0px everywhere else — which
+   is why this is safe to apply unconditionally.
+
+   On `.pa-stage` rather than on `.assistant-shell`, so the copy of the
+   shell that every dialog portal wraps around itself is untouched;
+   dialogs carry their own inset on the footer that needs it. */
+.assistant-shell.pa-stage {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* =================================================================
+   THE DIMMER
+
+   A black sheet over everything, at an opacity the brightness store
+   writes to `--pa-dim`. See lib/brightness.ts for why this is a sheet
+   and not a `filter: brightness()` — a filter on any ancestor makes a
+   containing block for `position: fixed` and kills `backdrop-filter`
+   in the subtree, and this portal is built out of both.
+
+   On `html`, not on the shell, for two reasons. It has to cover the
+   dialogs and toasts, which portal to `<body>` and would out-stack
+   anything the shell's own tree could produce. And it has to exist
+   before React does — the blocking script in layout.tsx sets the same
+   attribute, so a portal opened at night never flashes at full
+   brightness on the way in.
+
+   The attribute gates it so there is no always-on full-viewport layer
+   for the compositor to carry when nobody is dimming anything.
+   ================================================================= */
+html[data-pa-dim]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  /* Above every layer this app owns, including the Radix portals. */
+  z-index: 2147483000;
+  pointer-events: none;
+  background: #000;
+  opacity: var(--pa-dim, 0);
+  /* The z-index is belt and braces. What actually guarantees this
+     covers everything is that `body` carries `isolation: isolate` and
+     is therefore a stacking context: nothing inside it can out-stack a
+     sheet hung off `html`, at any z-index, including the dial that
+     sets this value. See brightness-dial.tsx. */
+  /* Composited, so dragging the slider does not repaint the page under it. */
+  will-change: opacity;
+}
+
+/* ---- and the lift, above neutral ----
+   No amount of compositing another LAYER over the page adds light. A
+   white sheet on `screen` lifts the ink along with the ground and turns
+   black text grey, which is fog rather than brightness.
+
+   `backdrop-filter` is the one way to reach what has already been
+   painted without being an ancestor of any of it: no containing block
+   moves, and every frosted panel below keeps its own backdrop-filter,
+   which a `filter` on a wrapper would have destroyed.
+
+   But not `brightness()`, and that is the part worth reading. A
+   multiply is a straight line and a straight line clips. The dark
+   theme's own text sits at 0.91 luminance, so any multiplier past
+   about 1.1 pushes it into flat white — measured at 2×, a third of the
+   pixels in a block of display type were pure white and the region had
+   fallen from 224 distinct tone levels to 171, which is antialiasing
+   being thrown away. Every shorthand filter function is affine in the
+   colour channels, so no combination of them can do better.
+
+   The filter it references is a gamma — see `BrightnessFilter` in
+   layout.tsx. 0 stays 0, 1 stays 1, everything between lifts, and
+   nothing can clip however far the slider goes. Same brightness as the
+   multiply on this page (×1.98 mean against ×1.92) with 207 of the 224
+   levels kept and not one pixel clipped.
+
+   `opacity` is the strength, and it is doing real work: it cross-fades
+   the filtered backdrop against the unfiltered one underneath, which
+   is a whole continuous range off a single fixed curve — and cannot
+   clip either, since both ends of the fade are already in range.
+
+   `::before`, not `::after`: an element has one of each, and the dimmer
+   already owns that one. They are mutually exclusive by construction,
+   but sharing a pseudo-element would mean the two rules cascading
+   together the first time that stopped being true.
+
+   It exists only above neutral, and that is the point. A full-viewport
+   backdrop-filter is a compositor pass over the whole screen for as
+   long as the layer is in the tree; the attribute keeps it out of a
+   page nobody has pushed past 100.
+
+   What that pass costs, measured while scrolling on a GPU-less box
+   (software rasterisation, so read the ratios rather than the
+   absolutes — the machine's own baseline moved between runs): no
+   sheet 1.00, the dimmer's opacity sheet 1.00, this one 1.67.
+
+   Three things measured IDENTICALLY to it: `brightness(2)`,
+   `brightness(1)` — the identity — and this curve. So the price is the
+   readback and re-composite, not the arithmetic, which is why the
+   better picture is free; and neither `will-change` nor forcing it
+   onto its own layer moved the number at all. On real hardware that
+   readback is a texture copy. */
+html[data-pa-lift]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  -webkit-backdrop-filter: url('#pa-lift-curve');
+  backdrop-filter: url('#pa-lift-curve');
+  opacity: var(--pa-lift, 0);
+}
+
+/* ---- the slider ----
+   A real <input type="range"> under a skin, so it keeps the arrow keys,
+   Home/End, the platform's own drag handling and a proper a11y contract.
+   `--pa-fill` is the only thing the component writes per frame. */
+.assistant-shell .pa-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 1.5rem; /* the HIT area; the painted track is the ::before below */
+  background: transparent;
+  cursor: pointer;
+}
+.assistant-shell .pa-slider:focus {
+  outline: none;
+}
+
+/* The track, drawn twice because the two engines will not share a
+   selector — but with the SAME two layers, which is why there is no
+   `::-moz-range-progress` any more. Firefox's progress pseudo-element
+   exists to paint a fill the stylesheet cannot measure; this slider is
+   handed `--pa-fill` by the component, so both engines can draw the
+   fill themselves and both can therefore carry the notch.
+
+   Layer one is that notch: a 2px mark at `--pa-neutral`, where the
+   scale passes 100 and the page is exactly as the browser drew it.
+   Above that point the slider is no longer undoing a dim, it is
+   pushing past what the page can do on its own, and without a mark
+   there is no way to feel where the line is. It is drawn FIRST so it
+   stays visible over the azure fill. */
+.assistant-shell .pa-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 calc(var(--pa-neutral, 50%) - 1px),
+      var(--pa-muted) calc(var(--pa-neutral, 50%) - 1px) calc(var(--pa-neutral, 50%) + 1px),
+      transparent calc(var(--pa-neutral, 50%) + 1px) 100%
+    ),
+    linear-gradient(
+      90deg,
+      var(--pa-azure) 0 var(--pa-fill, 100%),
+      var(--pa-line) var(--pa-fill, 100%) 100%
+    );
+}
+.assistant-shell .pa-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 calc(var(--pa-neutral, 50%) - 1px),
+      var(--pa-muted) calc(var(--pa-neutral, 50%) - 1px) calc(var(--pa-neutral, 50%) + 1px),
+      transparent calc(var(--pa-neutral, 50%) + 1px) 100%
+    ),
+    linear-gradient(
+      90deg,
+      var(--pa-azure) 0 var(--pa-fill, 100%),
+      var(--pa-line) var(--pa-fill, 100%) 100%
+    );
+}
+
+.assistant-shell .pa-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  /* (track 4px - thumb 14px) / 2, so it rides centred on the track. */
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px var(--pa-accent-border),
+    0 2px 6px -1px rgba(0, 0, 0, 0.45);
+  transition: transform 0.14s var(--pa-ease);
+}
+.assistant-shell .pa-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px var(--pa-accent-border),
+    0 2px 6px -1px rgba(0, 0, 0, 0.45);
+}
+.assistant-shell .pa-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.assistant-shell .pa-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 1px var(--pa-accent-border),
+    0 0 0 4px var(--pa-accent-glow),
+    0 2px 6px -1px rgba(0, 0, 0, 0.45);
+}
+.assistant-shell .pa-slider:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 1px var(--pa-accent-border),
+    0 0 0 4px var(--pa-accent-glow);
+}
+
+/* =================================================================
+   THE TOOLTIP
+
+   Replaces the browser's `title` popup everywhere in the portal —
+   see components/shared/tooltip.tsx for the layer that drives it and
+   for why it is one delegated listener rather than a component.
+
+   Rendered in a portal at <body>, wrapped in a second copy of
+   `.assistant-shell` so the tokens below resolve. Near-opaque and
+   flat, with NO backdrop-filter: it floats over dialogs, over the
+   map stage and over its own trigger, and a blur that samples
+   whichever of those happens to be underneath reads as a different
+   material each time it opens.
+   ================================================================= */
+.assistant-shell .pa-tip {
+  position: relative;
+  max-width: min(15rem, calc(100vw - 24px));
+  border-radius: 0.65rem;
+  border: 1px solid var(--pa-line);
+  background: var(--pa-solid);
+  box-shadow: var(--pa-shadow-lg);
+  padding: 0.32rem 0.55rem;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  color: var(--pa-navy);
+  text-align: center;
+  /* Two words alone on the second line is the usual failure of a
+     wrapped tooltip; balancing splits it down the middle instead. */
+  text-wrap: balance;
+}
+
+/* The caret. A rotated square rather than a border triangle, so it
+   carries the same fill AND the same hairline as the pill — a
+   triangle can only ever be one flat colour, which shows as a
+   notch where the tip's own border passes behind it.
+
+   `--pa-tip-arrow` is written by the layer: the tip is centred on
+   its trigger until the viewport edge shoves it sideways, and after
+   that the caret still has to point at the thing it belongs to. */
+.assistant-shell .pa-tip::after {
+  content: '';
+  position: absolute;
+  left: var(--pa-tip-arrow, 50%);
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  transform: rotate(45deg);
+  background: var(--pa-solid);
+  border: 1px solid var(--pa-line);
+}
+
+/* Only the two edges facing away from the pill are drawn; the other
+   two would cut a hairline across the middle of the surface. */
+.assistant-shell .pa-tip[data-side='top']::after {
+  bottom: -4px;
+  border-top: 0;
+  border-left: 0;
+  border-bottom-right-radius: 1px;
+}
+.assistant-shell .pa-tip[data-side='bottom']::after {
+  top: -4px;
+  border-bottom: 0;
+  border-right: 0;
+  border-top-left-radius: 1px;
+}
+
+/* The shortcut, where a tip names one. Set from `data-tip-key` and
+   never parsed out of the sentence — "Close — Esc" and "Rolled
+   forward 3 times — is this task too big?" are the same shape, and
+   only the call site knows which is a legend. */
+.assistant-shell .pa-tip-key {
+  margin-left: 0.4rem;
+  display: inline-block;
+  border-radius: 0.3rem;
+  border: 1px solid var(--pa-line);
+  background: var(--pa-well);
+  padding: 0 0.3rem;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--pa-muted);
+}
