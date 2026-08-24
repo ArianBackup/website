@@ -3,5 +3,19 @@
     "framework": null,
     "installCommand": "npm install",
     "buildCommand": "npm run build",
-    "outputDirectory": "public"
+    "outputDirectory": "public",
+    "rewrites": [
+        {
+            "source": "/hq-cstbflbv",
+            "destination": "https://dashboard-arians-projects-9ab864c3.vercel.app/hq-cstbflbv"
+        },
+        {
+            "source": "/hq-cstbflbv/:path*",
+            "destination": "https://dashboard-arians-projects-9ab864c3.vercel.app/hq-cstbflbv/:path*"
+        },
+        {
+            "source": "/_next/:path*",
+            "destination": "https://dashboard-arians-projects-9ab864c3.vercel.app/_next/:path*"
+        }
+    ]
 }

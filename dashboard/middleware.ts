@@ -81,7 +81,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  /* Everything except Next's own assets and the favicon — the wall has to see
-     page requests, and there is nothing else here worth excluding. */
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  /* Everything except Next's own plumbing and the favicon.
+   *
+   * ALL of `_next`, not just `static` and `image`. The portfolio in front
+   * proxies `/_next/*` through to this app so the portal's own chunks and
+   * fonts resolve under arianfarhadi.com, and the wall must not sit in front
+   * of them — a rule that only excused `_next/static` would have 404'd
+   * anything else Next decides to serve from that prefix, and the failure
+   * would look like a broken page rather than a routing rule. */
+  matcher: ['/((?!_next/|favicon.ico).*)'],
 };
