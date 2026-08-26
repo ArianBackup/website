@@ -15,6 +15,13 @@ const CRT_EFFECT_KEY = 'arian-portfolio:crt-effect';
 // The desktop ships with this site (static/os -> public/os), so it is
 // same-origin and needs no separate deployment.
 const SCREEN_URL = '/os/index.html';
+/**
+ * How long after reaching the computer the desktop starts. The camera's move
+ * into the monitor runs 2000ms (see Camera.enterMonitor), and mounting a
+ * bundled desktop is enough main-thread work to stutter an animation, so the
+ * boot waits for the move to land.
+ */
+const SCREEN_BOOT_DELAY = 2200;
 const IFRAME_PADDING = 32;
 const IFRAME_SIZE = {
     w: SCREEN_SIZE.w - IFRAME_PADDING,
@@ -42,6 +49,7 @@ export default class MonitorScreen extends EventEmitter {
     iframe: HTMLIFrameElement;
     crtEffectMeshes: THREE.Mesh[];
     screenBooted: boolean;
+    bootTimer: number;
 
     constructor() {
         super();
@@ -59,6 +67,7 @@ export default class MonitorScreen extends EventEmitter {
         this.mouseClickInProgress = false;
         this.shouldLeaveMonitor = false;
         this.screenBooted = false;
+        this.bootTimer = 0;
 
         // Create screen
         this.initializeScreenEvents();
@@ -137,6 +146,7 @@ export default class MonitorScreen extends EventEmitter {
                     this.prevInComputer &&
                     !this.mouseClickInProgress
                 ) {
+                    this.cancelBoot();
                     this.camera.trigger('leftMonitor');
                 }
 
@@ -179,6 +189,7 @@ export default class MonitorScreen extends EventEmitter {
                 this.application.mouse.trigger('mouseup', [event]);
 
                 if (this.shouldLeaveMonitor) {
+                    this.cancelBoot();
                     this.camera.trigger('leftMonitor');
                     this.shouldLeaveMonitor = false;
                 }
@@ -201,9 +212,19 @@ export default class MonitorScreen extends EventEmitter {
      * waiting on the network by the time it is asked for.
      */
     bootScreen() {
-        if (this.screenBooted || !this.iframe) return;
-        this.screenBooted = true;
-        this.iframe.src = SCREEN_URL;
+        if (this.screenBooted || this.bootTimer || !this.iframe) return;
+        this.bootTimer = window.setTimeout(() => {
+            this.bootTimer = 0;
+            this.screenBooted = true;
+            this.iframe.src = SCREEN_URL;
+        }, SCREEN_BOOT_DELAY);
+    }
+
+    /** Turned away before the machine started; it starts on the next approach. */
+    cancelBoot() {
+        if (!this.bootTimer) return;
+        window.clearTimeout(this.bootTimer);
+        this.bootTimer = 0;
     }
 
     /**
