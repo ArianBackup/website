@@ -16,12 +16,14 @@ const CRT_EFFECT_KEY = 'arian-portfolio:crt-effect';
 // same-origin and needs no separate deployment.
 const SCREEN_URL = '/os/index.html';
 /**
- * How long after reaching the computer the desktop starts. The camera's move
- * into the monitor runs 2000ms (see Camera.enterMonitor), and mounting a
- * bundled desktop is enough main-thread work to stutter an animation, so the
- * boot waits for the move to land.
+ * How long after reaching the computer the desktop starts. Mounting a bundled
+ * desktop is enough main-thread work to stutter an animation, so the boot waits
+ * for the camera's move into the monitor. That move is nominally 2000ms, but on
+ * a (0.13, 0.99, 0, 1) curve it covers 99% of the distance in the first 13% —
+ * everything after ~260ms is an imperceptible settle — so it waits out the part
+ * that shows.
  */
-const SCREEN_BOOT_DELAY = 2200;
+const SCREEN_BOOT_DELAY = 800;
 const IFRAME_PADDING = 32;
 const IFRAME_SIZE = {
     w: SCREEN_SIZE.w - IFRAME_PADDING,
