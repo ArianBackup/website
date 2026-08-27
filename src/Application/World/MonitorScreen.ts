@@ -23,7 +23,7 @@ const SCREEN_URL = '/os/index.html';
  * everything after ~260ms is an imperceptible settle — so it waits out the part
  * that shows.
  */
-const SCREEN_BOOT_DELAY = 800;
+const SCREEN_BOOT_DELAY = 1000;
 const IFRAME_PADDING = 32;
 const IFRAME_SIZE = {
     w: SCREEN_SIZE.w - IFRAME_PADDING,
